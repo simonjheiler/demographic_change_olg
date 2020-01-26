@@ -1,3 +1,5 @@
+import pdb  # noqa:F401
+
 import numpy as np
 
 
@@ -76,29 +78,30 @@ def gini(pop, val, makeplot=False):
     )
 
     pop = np.pad(pop, (1, 0), "constant", constant_values=(0, 0))  # pre-append a zero
-    val = np.pad(pop, (1, 0), "constant", constant_values=(0, 0))
+    val = np.pad(val, (1, 0), "constant", constant_values=(0, 0))
 
-    isok = ~np.isnan([pop, val])  # filter out NaNs
-    if sum(isok) < 2:
+    # filter out NaNs
+    pop = pop[~np.isnan(pop) & ~np.isnan(val)]
+    val = val[~np.isnan(pop) & ~np.isnan(val)]
+
+    if len(pop) < 2:
         print("gini:lacking_data", "not enough data")
         gini = np.nan
         lorentz_rel = np.nan(1, 4)
         lorentz_abs = np.nan(1, 4)
         return
 
-    pop = pop[isok]
-    val = val[isok]
-
-    assert np.all(pop >= 0) and np.all(val >= 0)
-    #     "gini expects nonnegative vectors (neg elements in pop = #d, in val = #d).".format(
-    #     sum(pop < 0), sum(val < 0)
-    # )
+    assert np.all(pop >= 0) and np.all(
+        val >= 0
+    ), "gini expects nonnegative vectors (neg elements in pop = {}, in val = {}).".format(
+        sum(pop < 0), sum(val < 0)
+    )
 
     # process input
     z = val * pop
-    [_, ord] = np.sort(val)
-    pop = pop[ord]
-    z = z[ord]
+    val_index = val.argsort()
+    pop = pop[val_index]
+    z = z[val_index]
     pop = np.cumsum(pop)
     z = np.cumsum(z)
     relpop = pop / pop[-1]
@@ -109,19 +112,17 @@ def gini(pop, val, makeplot=False):
     # We compute the area below the Lorentz curve. We do this by
     # computing the average of the left and right Riemann-like sums.
     # (I say Riemann-'like' because we evaluate not on a uniform grid, but
-    # on the points given by the pop data).
-    #
-    # These are the two Rieman-like sums:
-    #    leftsum  = sum(relz(1:end-1) .* diff(relpop));
-    #    rightsum = sum(relz(2:end)   .* diff(relpop));
+    # on the points given by the pop data). These are the two Rieman-like sums:
+    #    leftsum  = sum(relz[:-1] * diff(relpop))
+    #    rightsum = sum(relz[1:] * diff(relpop))
     # The Gini coefficient is one minus twice the average of leftsum and
     # rightsum. We can put all of this into one line.
-    gini = 1 - sum((relz[:-1] + relz[2:]) * np.diff(relpop))
+    gini = 1 - sum((relz[:-1] + relz[1:]) * np.diff(relpop))
 
     # Lorentz curve
     lorentz_rel = [relpop, relz]
     lorentz_abs = [pop, z]
-    if makeplot:  # ... plot it?
+    if makeplot:
         # area(relpop, relz, 'FaceColor', [0.5, 0.5, 1.0])  # the Lorentz curve
         # plot([0, 1], [0, 1], '--k')  # 45 degree line
         # axis tight  # ranges of abscissa and ordinate are by definition exactly [0,1]
