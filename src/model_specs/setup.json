@@ -2,7 +2,13 @@
   "max_age": 66,
   "retirement_age": 46,
   "beta": 0.97,
-  "sigme": 2.0,
+  "sigma": 2.0,
   "alpha": 0.36,
-  "delta": 0.06
+  "delta": 0.06,
+  "num_income_states": 2,
+  "reform": 1,
+  "J": 66,
+  "JR": 46,
+  "n": 0.011,
+  "N": 2
 }

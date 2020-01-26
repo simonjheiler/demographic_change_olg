@@ -7,27 +7,34 @@ import pandas as pd
 from bld.project_paths import project_paths_join as ppj
 from src.analysis.auxiliary import gini
 
-num_income_states = 2
-reform = 1
-J = 66  # life-span
-JR = 46  # age of retirement
-tR = J - JR + 1  # length of retirement
-tW = JR - 1  # length of working life
-n = 0.011  # Population growth
-N = 2  # number of shock realizations
-
+# Load parameters
 eff = pd.read_csv(ppj("IN_DATA", "ef.csv"))
 sr = pd.read_csv(ppj("IN_DATA", "sr.csv"))
 
-params = json.load("setup.json")
+with open(ppj("IN_MODEL_SPECS", "setup.json")) as json_file:
+    params = json.load(json_file)
 
 alpha = params["alpha"]
 beta = params["beta"]
 sigma = params["sigma"]
 delta = params["delta"]
+max_age = params["max_age"]
+retirement_age = params["retirement_age"]
+beta = params["beta"]
+sigma = params["sigma"]
+alpha = params["alpha"]
+delta = params["delta"]
+num_income_states = params["num_income_states"]
+reform = params["reform"]
+J = params["J"]
+JR = params["JR"]
+n = params["n"]
+N = params["N"]
 
-print(eff)
-print(sr)
+
+tR = J - JR + 1  # length of retirement
+tW = JR - 1  # length of working life
+
 
 # Distribution of newborns over shocks
 z_init = [0.2037, 0.7963]
@@ -39,7 +46,7 @@ tran = pd.DataFrame(
 )
 
 # Measure of each generation
-mass = np.ones(J, 1)
+mass = np.ones((J, 1))
 for j in range(2, J):
     mass[j] = mass[j - 1] / (1 + n)
 
@@ -50,9 +57,7 @@ mass = mass / sum(mass)
 maxkap = 30  # maximum value of capital grid
 minkap = 0.001  # minimum value of capital grid
 nk = 1000  # number of grid points
-inckap = (maxkap - minkap) / (nk - 1)  # distance between points
-aux = range(nk)
-kap = minkap + inckap * (aux - 1)
+kap = np.linspace(minkap, maxkap, nk)
 
 
 # Capital grid
@@ -112,14 +117,14 @@ k1 = k0 + 10
 l1 = l0 + 10
 
 # Initializations for backward induction
-vR = np.zeros(nk, tR)  # value function of retired agents
-kapRopt = np.ones(nk, tR)  # optimal savings of retired agents
+vR = np.zeros((nk, tR))  # value function of retired agents
+kapRopt = np.ones((nk, tR))  # optimal savings of retired agents
 # (store INDEX of k' in capital grid, not k' itself!)
 
-vW = np.zeros(N, nk, tW)  # value function of workers
-kapWopt = np.ones(N, nk, tW)  # optimal savings of workers
+vW = np.zeros((N, nk, tW))  # value function of workers
+kapWopt = np.ones((N, nk, tW))  # optimal savings of workers
 
-labopt = np.ones(N, nk, tW)  # optimal labor supply
+labopt = np.ones((N, nk, tW))  # optimal labor supply
 
 neg = -1e10  # very small number
 
@@ -151,21 +156,21 @@ while (q < nq) and ((abs(k1 - k0) > tolk) or (abs(l1 - l0) > tollab)):
     flow_utility = (consumption ** ((1 - sigma) * gamma)) / (
         1 - sigma
     )  # last period utility (vector!)
-    vR[:, tR] = flow_utility  # last period indirect utility (vector!)
+    vR[:, tR - 1] = flow_utility  # last period indirect utility (vector!)
 
-    for age in range(tR, -1, -1, -1):  # age
+    for age in range(tR - 2, -1, -1):  # age
         for assets_this_period_idx in range(nk):  # assets today
 
             # Initialize right-hand side of Bellman equation
             vmin = neg
-            assets_next_period_idx = 0
+            assets_next_period_idx = -1
             # More efficient is to use:
             # l = min(kapRopt(max(j-1,1),i),nk-1)-1;
 
             # Loop over all k's in the capital grid to find the value,
             # which gives max of the right-hand side of Bellman equation
 
-            while assets_next_period_idx < nk:  # assets tomorrow
+            while assets_next_period_idx < nk - 1:  # assets tomorrow
                 assets_next_period_idx += 1
                 assets_this_period = kap[
                     assets_this_period_idx
@@ -179,7 +184,7 @@ while (q < nq) and ((abs(k1 - k0) > tolk) or (abs(l1 - l0) > tollab)):
 
                 if consumption <= 0:
                     flow_utility = neg
-                    assets_next_period_idx = nk
+                    assets_next_period_idx = nk - 1
                 else:
                     flow_utility = (consumption ** ((1 - sigma) * gamma)) / (1 - sigma)
 
@@ -193,20 +198,20 @@ while (q < nq) and ((abs(k1 - k0) > tolk) or (abs(l1 - l0) > tollab)):
                     vmin = v0
 
     # Working households
-    for age in range(tW, -1, -1, -1):  # age
+    for age in range(tW - 1, -1, -1):  # age
         for e in range(N):  # productivity shock
             for assets_this_period_idx in range(nk):  # assets today
 
                 # Initialize right-hand side of Bellman equation
                 vmin = neg
-                assets_next_period_idx = 0
+                assets_next_period_idx = -1
                 # More efficient is to use:
                 # l=min(kapWopt(e,max(j-1,1),i),nk-1)-1;
 
                 # Loop over all k's in the capital grid to find the value,
                 # which gives max of the right-hand side of Bellman equation
 
-                while assets_next_period_idx < nk:  # assets tomorrow
+                while assets_next_period_idx < nk - 1:  # assets tomorrow
                     assets_next_period_idx += 1
 
                     assets_this_period = kap[
@@ -238,7 +243,7 @@ while (q < nq) and ((abs(k1 - k0) > tolk) or (abs(l1 - l0) > tollab)):
 
                     if consumption <= 0:
                         flow_utility = neg
-                        assets_next_period_idx = nk
+                        assets_next_period_idx = nk - 1
                     else:
                         flow_utility = (
                             ((consumption ** gamma) * (1 - lab) ** (1 - gamma))
@@ -247,7 +252,7 @@ while (q < nq) and ((abs(k1 - k0) > tolk) or (abs(l1 - l0) > tollab)):
 
                     # Right-hand side of Bellman equation
 
-                    if age == tW:  # retired next period
+                    if age == tW - 1:  # retired next period
                         v0 = flow_utility + beta * vR[assets_next_period_idx, 1]
                     else:
                         v0 = flow_utility + beta * (
