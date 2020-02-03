@@ -135,3 +135,83 @@ def gini(pop, val, makeplot=False):
         pass
 
     return gini, lorentz_rel, lorentz_abs
+
+
+# @nb.njit
+def util_retired(
+    interest_rate,
+    assets_this_period,
+    pension_benefits,
+    assets_next_period,
+    sigma,
+    gamma,
+    neg,
+):
+
+    consumption = (
+        (1 + interest_rate) * assets_this_period + pension_benefits - assets_next_period
+    )
+    if consumption <= 0:
+        flow_utility = neg
+    else:
+        flow_utility = (consumption ** ((1 - sigma) * gamma)) / (1 - sigma)
+
+    return flow_utility
+
+
+# @nb.njit
+def labor_input(
+    interest_rate,
+    wage_rate,
+    assets_this_period,
+    assets_next_period,
+    productivity,
+    eff,
+    gamma,
+    tau,
+):
+
+    lab = (
+        gamma * (1 - tau) * productivity * eff * wage_rate
+        - (1 - gamma) * ((1 + interest_rate) * assets_this_period - assets_next_period)
+    ) / ((1 - tau) * wage_rate * productivity * eff)
+
+    # Check feasibility of labor supply
+    if lab > 1:
+        lab = 1
+    elif lab < 0:
+        lab = 0
+
+    return lab
+
+
+# @nb.njit
+def util_working(
+    interest_rate,
+    wage_rate,
+    assets_this_period,
+    assets_next_period,
+    labor_input,
+    productivity,
+    eff,
+    tau,
+    neg,
+    gamma,
+    sigma,
+):
+
+    # Instantaneous utility
+    consumption = (
+        (1 + interest_rate) * assets_this_period
+        + (1 - tau) * wage_rate * productivity * eff * labor_input
+        - assets_next_period
+    )
+
+    if consumption <= 0:
+        flow_utility = neg
+    else:
+        flow_utility = (
+            ((consumption ** gamma) * (1 - labor_input) ** (1 - gamma)) ** (1 - sigma)
+        ) / (1 - sigma)
+
+    return flow_utility

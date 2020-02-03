@@ -7,81 +7,13 @@ import pandas as pd
 
 from bld.project_paths import project_paths_join as ppj
 from src.analysis.auxiliary import gini
-
+from src.analysis.auxiliary import labor_input
+from src.analysis.auxiliary import util_retired
+from src.analysis.auxiliary import util_working
 
 #######################################################
 # FUNCTIONS
 #######################################################
-
-# @nb.njit
-def util_retired(
-    interest_rate,
-    assets_this_period,
-    pension_benefits,
-    assets_next_period,
-    sigma,
-    gamma,
-    neg,
-):
-
-    consumption = (
-        (1 + interest_rate) * assets_this_period + pension_benefits - assets_next_period
-    )
-    if consumption <= 0:
-        flow_utility = neg
-    else:
-        flow_utility = (consumption ** ((1 - sigma) * gamma)) / (1 - sigma)
-
-    return flow_utility
-
-
-# @nb.njit
-def labour_input(gamma, tau, z, eff, w0, r0, assets_this_period, assets_next_period):
-
-    lab = (
-        gamma * (1 - tau) * z * eff * w0
-        - (1 - gamma) * ((1 + r0) * assets_this_period - assets_next_period)
-    ) / ((1 - tau) * w0 * z * eff)
-
-    # Check feasibility of labor supply
-    if lab > 1:
-        lab = 1
-    elif lab < 0:
-        lab = 0
-
-    return lab
-
-
-# @nb.njit
-def util_working(
-    r0,
-    w0,
-    assets_this_period,
-    assets_next_period,
-    labour_input,
-    z,
-    eff,
-    tau,
-    neg,
-    gamma,
-    sigma,
-):
-
-    # Instantaneous utility
-    consumption = (
-        (1 + r0) * assets_this_period
-        + (1 - tau) * w0 * z * eff * labour_input
-        - assets_next_period
-    )
-
-    if consumption <= 0:
-        flow_utility = neg
-    else:
-        flow_utility = (
-            ((consumption ** gamma) * (1 - labour_input) ** (1 - gamma)) ** (1 - sigma)
-        ) / (1 - sigma)
-
-    return flow_utility
 
 
 #####################################################
@@ -299,15 +231,15 @@ if __name__ == "__main__":
                         ]  # future asset holdings
 
                         # Optimal labor supply
-                        lab = labour_input(
-                            gamma,
-                            tau,
-                            z[e],
-                            eff[age],
-                            w0,
+                        lab = labor_input(
                             r0,
+                            w0,
                             assets_this_period,
                             assets_next_period,
+                            z[e],
+                            eff[age],
+                            gamma,
+                            tau,
                         )
 
                         # Instantaneous utility
