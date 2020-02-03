@@ -6,7 +6,7 @@
   "alpha": 0.36,
   "delta": 0.06,
   "num_income_states": 2,
-  "reform": 1,
+  "reform": 0,
   "J": 66,
   "JR": 46,
   "n": 0.011,
