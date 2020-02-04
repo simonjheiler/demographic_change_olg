@@ -28,10 +28,10 @@ def setup_labor_input():
     out["wage_rate"] = 1.0
     out["assets_this_period"] = 10.0
     out["assets_next_period"] = 10.0
-    out["productivity"] = 3.0
+    out["productivity"] = 1.0
     out["eff"] = 1.0
-    out["gamma"] = 0.42
-    out["tau"] = 0.11
+    out["gamma"] = 1.0
+    out["tau"] = 0.0
     return out
 
 
@@ -92,7 +92,7 @@ def test_gini_unequal(setup_gini):
 
 
 def test_labor_input_in_range(setup_labor_input):
-    expected = 0.5
+    expected = 1.0
     actual = labor_input(**setup_labor_input)
     assert actual == expected
 
@@ -105,7 +105,7 @@ def test_labor_input_too_high(setup_labor_input):
 
 
 def test_labor_input_too_low(setup_labor_input):
-    setup_labor_input["assets_next_period"] = 1.0
+    setup_labor_input["assets_this_period"] = 1.0
     expected = 0.0
     actual = labor_input(**setup_labor_input)
     assert actual == expected

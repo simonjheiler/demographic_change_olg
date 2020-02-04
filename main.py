@@ -217,18 +217,12 @@ if __name__ == "__main__":
                     # More efficient is to use:
                     # l=min(kapWopt(e,max(j-1,1),i),nk-1)-1;
 
-                    # Loop over all k's in the capital grid to find the value,
-                    # which gives max of the right-hand side of Bellman equation
-
                     while assets_next_period_idx < nk - 1:  # assets tomorrow
+
                         assets_next_period_idx += 1
 
-                        assets_this_period = kap[
-                            assets_this_period_idx
-                        ]  # current asset holdings
-                        assets_next_period = kap[
-                            assets_next_period_idx
-                        ]  # future asset holdings
+                        assets_this_period = kap[assets_this_period_idx]
+                        assets_next_period = kap[assets_next_period_idx]
 
                         # Optimal labor supply
                         lab = labor_input(
@@ -261,7 +255,6 @@ if __name__ == "__main__":
                             assets_next_period_idx = nk - 1
 
                         # Right-hand side of Bellman equation
-
                         if age == tW - 1:  # retired next period
                             v0 = flow_utility + beta * vR[assets_next_period_idx, 0]
                         else:
