@@ -1,5 +1,6 @@
 import pdb  # noqa:F401
 
+import numba as nb
 import numpy as np
 
 
@@ -77,8 +78,9 @@ def gini(pop, val, makeplot=False):
         np.prod(pop.shape), np.prod(val.shape)
     )
 
-    pop = np.pad(pop, (1, 0), "constant", constant_values=(0, 0))  # pre-append a zero
-    val = np.pad(val, (1, 0), "constant", constant_values=(0, 0))
+    # pre-append a zero
+    pop = np.pad(pop.T, ((0, 0), (1, 0)), "constant", constant_values=(0))
+    val = np.pad(val.T, ((0, 0), (1, 0)), "constant", constant_values=(0))
 
     # filter out NaNs
     pop = pop[~np.isnan(pop) & ~np.isnan(val)]
@@ -137,81 +139,53 @@ def gini(pop, val, makeplot=False):
     return gini, lorentz_rel, lorentz_abs
 
 
-# @nb.njit
-def util_retired(
-    interest_rate,
+@nb.njit
+def _get_labor_input(
     assets_this_period,
-    pension_benefits,
     assets_next_period,
-    sigma,
+    interest_rate,
+    wage_rate,
+    tax_rate,
+    productivity,
+    efficiency,
     gamma,
-    neg,
 ):
+    labor_input = (
+        gamma * (1 - tax_rate) * productivity * efficiency * wage_rate
+        - (1 - gamma) * ((1 + interest_rate) * assets_this_period - assets_next_period)
+    ) / ((1 - tax_rate) * wage_rate * productivity * efficiency)
 
-    consumption = (
-        (1 + interest_rate) * assets_this_period + pension_benefits - assets_next_period
-    )
-    if consumption <= 0:
-        flow_utility = neg
-    else:
-        flow_utility = (consumption ** ((1 - sigma) * gamma)) / (1 - sigma)
+    return labor_input
+
+
+@nb.njit
+def util(
+    consumption, labor_input, gamma, sigma,
+):
+    flow_utility = (
+        ((consumption ** gamma) * (1 - labor_input) ** (1 - gamma)) ** (1 - sigma)
+    ) / (1 - sigma)
 
     return flow_utility
 
 
-# @nb.njit
-def labor_input(
-    interest_rate,
-    wage_rate,
+@nb.njit
+def _get_consumption(
     assets_this_period,
     assets_next_period,
-    productivity,
-    eff,
-    gamma,
-    tau,
-):
-
-    lab = (
-        gamma * (1 - tau) * productivity * eff * wage_rate
-        - (1 - gamma) * ((1 + interest_rate) * assets_this_period - assets_next_period)
-    ) / ((1 - tau) * wage_rate * productivity * eff)
-
-    # Check feasibility of labor supply
-    if lab > 1:
-        lab = 1
-    elif lab < 0:
-        lab = 0
-
-    return lab
-
-
-# @nb.njit
-def util_working(
-    interest_rate,
-    wage_rate,
-    assets_this_period,
-    assets_next_period,
+    pension_benefit,
     labor_input,
+    interest_rate,
+    wage_rate,
+    tax_rate,
     productivity,
-    eff,
-    tau,
-    neg,
-    gamma,
-    sigma,
+    efficiency,
 ):
-
-    # Instantaneous utility
     consumption = (
         (1 + interest_rate) * assets_this_period
-        + (1 - tau) * wage_rate * productivity * eff * labor_input
+        + (1 - tax_rate) * wage_rate * productivity * efficiency * labor_input
+        + pension_benefit
         - assets_next_period
     )
 
-    if consumption <= 0:
-        flow_utility = neg
-    else:
-        flow_utility = (
-            ((consumption ** gamma) * (1 - labor_input) ** (1 - gamma)) ** (1 - sigma)
-        ) / (1 - sigma)
-
-    return flow_utility
+    return consumption
