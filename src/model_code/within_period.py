@@ -1,7 +1,4 @@
-import pdb  # noqa:F401
-
 import numba as nb
-import numpy as np
 
 
 @nb.njit
@@ -54,5 +51,3 @@ def _get_consumption(
     )
 
     return consumption
-
-

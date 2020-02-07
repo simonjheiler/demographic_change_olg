@@ -1,6 +1,3 @@
-import pdb  # noqa:F401
-
-import numba as nb
 import numpy as np
 
 
@@ -137,3 +134,38 @@ def gini(pop, val, makeplot=False):
         pass
 
     return gini, lorentz_rel, lorentz_abs
+
+
+def reshape_as_vector(
+    in_working,
+    in_retired,
+    n_productivity_states,
+    age_max,
+    age_retire,
+    n_gridpoints_capital,
+):
+
+    out = np.zeros(
+        (
+            (
+                (n_productivity_states - 1) * age_retire
+                + age_max
+                - (n_productivity_states - 1)
+            )
+            * n_gridpoints_capital,
+            1,
+        )
+    )
+    out[
+        : (n_productivity_states * (age_retire - 1) * n_gridpoints_capital)
+    ] = in_working.reshape(
+        ((n_productivity_states * (age_retire - 1) * n_gridpoints_capital), 1),
+        order="F",
+    )
+    out[
+        (n_productivity_states * (age_retire - 1) * n_gridpoints_capital) :
+    ] = in_retired.reshape(
+        ((age_max - age_retire + 1) * n_gridpoints_capital, 1), order="F"
+    )
+
+    return out
