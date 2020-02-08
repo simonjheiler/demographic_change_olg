@@ -125,7 +125,7 @@ def solve_by_backward_induction(
                     interest_rate=interest_rate,
                     wage_rate=wage_rate,
                     income_tax_rate=income_tax_rate,
-                    prod_states=np.float64(0.0),
+                    productivity=np.float64(0.0),
                     efficiency=np.float64(0.0),
                 )
 
@@ -135,7 +135,8 @@ def solve_by_backward_induction(
                 else:
                     flow_utility = util(
                         consumption=consumption,
-                        labor_input=0,
+                        labor_input=np.float64(0.0),
+                        hc_effort=np.float64(0.0),
                         gamma=gamma,
                         sigma=sigma,
                     )
@@ -183,12 +184,6 @@ def solve_by_backward_induction(
                         gamma=gamma,
                     )
 
-                    # Check feasibility of labor supply
-                    if lab > 1:
-                        lab = 1
-                    elif lab < 0:
-                        lab = 0
-
                     # Instantaneous utility
                     consumption = get_consumption(
                         assets_this_period=assets_this_period,
@@ -209,6 +204,7 @@ def solve_by_backward_induction(
                         flow_utility = util(
                             consumption=consumption,
                             labor_input=lab,
+                            hc_effort=np.float64(0.0),
                             gamma=gamma,
                             sigma=sigma,
                         )

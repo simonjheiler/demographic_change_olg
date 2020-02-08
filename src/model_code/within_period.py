@@ -40,38 +40,14 @@ def get_labor_input(
     labor_input = (
         gamma * (1 - income_tax_rate) * productivity * efficiency * wage_rate
         - (1 - gamma) * ((1 + interest_rate) * assets_this_period - assets_next_period)
-    ) / ((1 - income_tax_rate) * wage_rate * productivity * efficiency)
+    ) / ((1 - income_tax_rate) * productivity * efficiency * wage_rate)
+
+    if labor_input > 1:
+        labor_input = 1
+    elif labor_input < 0:
+        labor_input = 0
 
     return labor_input
-
-
-@nb.njit
-def util(consumption, labor_input, hc_effort, gamma, sigma):
-    """ Calculate per-period flow utility of household.
-
-    Arguments
-    ---------
-        consumption: np.float64
-            Household consumption in the current period
-        labor_input: np.float64
-            Hours worked
-        hc_effort: np.float64
-            Time invested in human capital accumulation
-        gamma: np.float64
-            Weight of consumption utility vs. leisure utility
-        sigma: np.float64
-            Inverse of inter-temporal elasticity of substitution
-    Returns
-    -------
-        flow_utility: np.float64
-            Household flow utility for the current period
-    """
-    flow_utility = (
-        ((consumption ** gamma) * (1 - labor_input - hc_effort) ** (1 - gamma))
-        ** (1 - sigma)
-    ) / (1 - sigma)
-
-    return flow_utility
 
 
 @nb.njit
@@ -121,6 +97,34 @@ def get_consumption(
     )
 
     return consumption
+
+
+@nb.njit
+def util(consumption, labor_input, hc_effort, gamma, sigma):
+    """ Calculate per-period flow utility of household.
+
+    Arguments
+    ---------
+        consumption: np.float64
+            Household consumption in the current period
+        labor_input: np.float64
+            Hours worked
+        hc_effort: np.float64
+            Time invested in human capital accumulation
+        gamma: np.float64
+            Weight of consumption utility vs. leisure utility
+        sigma: np.float64
+            Inverse of inter-temporal elasticity of substitution
+    Returns
+    -------
+        flow_utility: np.float64
+            Household flow utility for the current period
+    """
+    flow_utility = (
+        ((consumption ** gamma) * (1 - labor_input - hc_effort) ** (1 - gamma))
+        ** (1 - sigma)
+    ) / (1 - sigma)
+    return flow_utility
 
 
 @nb.njit

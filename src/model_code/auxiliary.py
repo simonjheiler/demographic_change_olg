@@ -78,8 +78,8 @@ def gini(pop, val, makeplot=False):
     )
 
     # pre-append a zero
-    pop = np.pad(pop.T, ((0, 0), (1, 0)), "constant", constant_values=0)
-    val = np.pad(val.T, ((0, 0), (1, 0)), "constant", constant_values=0)
+    pop = np.pad(pop.T, (1, 0), "constant", constant_values=0)
+    val = np.pad(val.T, (1, 0), "constant", constant_values=0)
 
     # filter out NaNs
     pop = pop[~np.isnan(pop) & ~np.isnan(val)]
@@ -159,7 +159,7 @@ def reshape_as_vector(
             Number of grid points of capital grid
     Returns
     -------
-        out: np.array(np.prod(in_1.shape) + np.prod(in_2.shape), 1)
+        out: np.array(np.prod(in_1.shape) + np.prod(in_2.shape))
             Combined input in vector shape
     """
     out = np.zeros(
@@ -179,5 +179,6 @@ def reshape_as_vector(
     ] = in_retired.reshape(
         ((age_max - age_retire + 1) * n_gridpoints_capital, 1), order="F"
     )
+    out = np.squeeze(out)
 
     return out
