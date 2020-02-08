@@ -1,14 +1,28 @@
 {
-  "max_age": 66,
-  "retirement_age": 46,
   "beta": 0.97,
   "sigma": 2.0,
   "alpha": 0.36,
   "delta": 0.06,
-  "num_income_states": 2,
   "reform": 0,
-  "J": 66,
-  "JR": 46,
-  "n": 0.011,
-  "N": 2
+  "age_max": 66,
+  "age_retire": 46,
+  "population_growth_rate": 0.011,
+  "n_prod_states": 2,
+  "transition_prod_states": [
+    [
+      0.9261,
+      0.0739
+    ],
+    [
+      0.0189,
+      0.9811
+    ]
+  ],
+  "z_init": [
+    0.2037,
+    0.7963
+  ],
+  "capital_min": 0.001,
+  "capital_max": 30.0,
+  "n_gridpoints_capital": 100
 }

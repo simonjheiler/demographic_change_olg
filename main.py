@@ -6,7 +6,7 @@ import pandas as pd
 from bld.project_paths import project_paths_join as ppj
 from src.model_code.auxiliary import gini
 from src.model_code.auxiliary import reshape_as_vector
-from src.model_code.solve import aggregate
+from src.model_code.solve import aggregate_readable as aggregate
 from src.model_code.solve import solve_by_backward_induction
 
 #####################################################
@@ -16,8 +16,8 @@ from src.model_code.solve import solve_by_backward_induction
 if __name__ == "__main__":
 
     # Load parameters
-    eff = pd.read_csv(ppj("IN_DATA", "ef.csv"))
-    eff = np.array(eff.values, dtype=float)
+    efficiency = pd.read_csv(ppj("IN_DATA", "ef.csv"))
+    efficiency = np.array(efficiency.values, dtype=float)
     sr = pd.read_csv(ppj("IN_DATA", "sr.csv"))
     sr = np.array(sr.values, dtype=float)
 
@@ -28,75 +28,74 @@ if __name__ == "__main__":
     beta = params["beta"]
     sigma = params["sigma"]
     delta = params["delta"]
-    max_age = params["max_age"]
-    retirement_age = params["retirement_age"]
-    num_income_states = params["num_income_states"]
     reform = params["reform"]
-    age_max = params["J"]
-    age_retire = params["JR"]
-    n = params["n"]
-    N = params["N"]
+    age_max = params["age_max"]
+    age_retire = params["age_retire"]
+    population_growth_rate = params["population_growth_rate"]
+    n_prod_states = params["n_prod_states"]
 
-    tR = age_max - age_retire + 1  # length of retirement
-    tW = age_retire - 1  # length of working life
+    duration_retired = age_max - age_retire + 1  # length of retirement
+    duration_working = age_retire - 1  # length of working life
 
     # Distribution of newborns over shocks
-    z_init = np.array([0.2037, 0.7963], dtype=np.float64)
+    productivity_init = np.array(params["z_init"], dtype=np.float64)
 
-    tran = np.array([[0.9261, 1.0 - 0.9261], [1.0 - 0.9811, 0.9811]], dtype=np.float64)
-
-    # Measure of each generation
-    mass = np.ones((age_max, 1), dtype=np.float64)
-    for j in range(1, age_max):
-        mass[j] = mass[j - 1] / (1 + n)
-
-    # Normalized measure of each generation (sum up to 1)
-    mass = mass / sum(mass)
+    transition_prod_states = np.array(
+        params["transition_prod_states"], dtype=np.float64
+    )
 
     # Capital grid
-    capital_min = 0.001  # minimum value of capital grid
-    capital_max = 30  # maximum value of capital grid
-    n_gridpoints_capital = 10  # number of grid points
+    capital_min = params["capital_min"]  # minimum value of capital grid
+    capital_max = params["capital_max"]  # maximum value of capital grid
+    n_gridpoints_capital = params["n_gridpoints_capital"]  # number of grid points
     capital_grid = np.linspace(
         capital_min, capital_max, n_gridpoints_capital, dtype=np.float64
     )
 
+    # Measure of each generation
+    mass = np.ones((age_max, 1), dtype=np.float64)
+    for j in range(1, age_max):
+        mass[j] = mass[j - 1] / (1 + population_growth_rate)
+
+    # Normalized measure of each generation (sum up to 1)
+    mass = mass / sum(mass)
+
     # Social Security tax rate and initial guesses
     if reform == 0:
-        tau = np.float64(0.11)
+        income_tax_rate = np.float64(0.11)
         aggregate_capital_in = np.float64(3.3254)
         aggregate_labor_in = np.float64(0.3414)
-        z = np.array([3.0, 0.5], dtype=np.float64)
+        prod_states = np.array([3.0, 0.5], dtype=np.float64)
         gamma = np.float64(0.42)
     elif reform == 1:
-        tau = np.float64(0.0)
+        income_tax_rate = np.float64(0.0)
         aggregate_capital_in = np.float64(4.244)
         aggregate_labor_in = np.float64(0.3565)
-        z = np.array([3.0, 0.5], dtype=np.float64)
+        prod_states = np.array([3.0, 0.5], dtype=np.float64)
         gamma = np.float64(0.42)
     elif reform == 2:
-        tau = np.float64(0.11)
+        income_tax_rate = np.float64(0.11)
         aggregate_capital_in = np.float64(1.0792)
         aggregate_labor_in = np.float64(0.1616)
-        z = np.array([0.5, 0.5], dtype=np.float64)
+        prod_states = np.array([0.5, 0.5], dtype=np.float64)
         gamma = np.float64(0.42)
     elif reform == 3:
-        tau = np.float64(0.0)
+        income_tax_rate = np.float64(0.0)
         aggregate_capital_in = np.float64(1.343)
         aggregate_labor_in = np.float64(0.1691)
-        z = np.array([0.5, 0.5], dtype=np.float64)
+        prod_states = np.array([0.5, 0.5], dtype=np.float64)
         gamma = np.float64(0.42)
     elif reform == 4:
-        tau = np.float64(0.11)
+        income_tax_rate = np.float64(0.11)
         aggregate_capital_in = np.float64(5.4755)
         aggregate_labor_in = np.float64(0.7533)
-        z = np.array([3.0, 0.5], dtype=np.float64)
+        prod_states = np.array([3.0, 0.5], dtype=np.float64)
         gamma = np.float64(0.999)
     elif reform == 5:
-        tau = np.float64(0.0)
+        income_tax_rate = np.float64(0.0)
         aggregate_capital_in = np.float64(6.845)
         aggregate_labor_in = np.float64(0.7535)
-        z = np.array([3.0, 0.5], dtype=np.float64)
+        prod_states = np.array([3.0, 0.5], dtype=np.float64)
         gamma = np.float64(0.999)
 
     # Tolerance levels for capital, labor and pension benefits
@@ -108,7 +107,7 @@ if __name__ == "__main__":
 
     aggregate_capital_out = aggregate_capital_in + 10
     aggregate_labor_out = aggregate_labor_in + 10
-    neg = -1e10  # very small number
+    neg = np.float64(-1e10)  # very small number
 
     ################################################################
     # Loop over capital, labor and pension benefits
@@ -136,7 +135,10 @@ if __name__ == "__main__":
             * (aggregate_labor_in ** (-alpha))
         )
         pension_benefit = np.float64(
-            tau * wage_rate * aggregate_labor_in / np.sum(mass[age_retire - 1 :])
+            income_tax_rate
+            * wage_rate
+            * aggregate_labor_in
+            / np.sum(mass[age_retire - 1 :])
         )
 
         ############################################################################
@@ -156,14 +158,14 @@ if __name__ == "__main__":
             gamma=gamma,
             pension_benefit=pension_benefit,
             neg=neg,
-            duration_working=tW,
-            duration_retired=tR,
-            n_states_productivity=N,
-            tax_rate=tau,
+            duration_working=duration_working,
+            duration_retired=duration_retired,
+            n_prod_states=n_prod_states,
+            income_tax_rate=income_tax_rate,
             beta=beta,
-            z=z,
-            eff=eff,
-            tran=tran,
+            prod_states=prod_states,
+            efficiency=efficiency,
+            transition_prod_states=transition_prod_states,
         )
 
         ############################################################################
@@ -175,17 +177,17 @@ if __name__ == "__main__":
             policy_capital_retired=policy_capital_retired,
             policy_labor=policy_labor,
             age_max=age_max,
-            n_states_productivity=N,
+            n_prod_states=n_prod_states,
             n_gridpoints_capital=n_gridpoints_capital,
-            duration_working=tW,
-            z_init=z_init,
-            tran=tran,
-            eff=eff,
+            duration_working=duration_working,
+            productivity_init=productivity_init,
+            transition_prod_states=transition_prod_states,
+            efficiency=efficiency,
             capital_grid=capital_grid,
             mass=mass,
-            duration_retired=tR,
-            n=n,
-            z=z,
+            duration_retired=duration_retired,
+            population_growth_rate=population_growth_rate,
+            prod_states=prod_states,
         )
 
         # Update the guess on capital and labor
@@ -239,29 +241,31 @@ if __name__ == "__main__":
     print(f"mass of agents at upper bound of asset grid = {mass_upper_bound}")
 
     # Average hours worked
-    h = np.zeros((tW, 1))
-    for d in range(tW):
+    h = np.zeros((duration_working, 1))
+    for d in range(duration_working):
         for ii in range(n_gridpoints_capital):
-            for jj in range(N):
+            for jj in range(n_prod_states):
                 h[d] += policy_labor[jj, ii, d] * gkW[jj, ii, d]
         h[d] = h[d] / sum(sum(gkW[:, :, d]))
 
     # Gini disposable income
     incomeR = interest_rate * capital_grid + pension_benefit
-    incomeR = np.tile(incomeR, (tR, 1)).T
+    incomeR = np.tile(incomeR, (duration_retired, 1)).T
 
-    incomeW = np.zeros((N, n_gridpoints_capital, tW))
-    for d in range(tW):
+    incomeW = np.zeros((n_prod_states, n_gridpoints_capital, duration_working))
+    for d in range(duration_working):
         for ii in range(n_gridpoints_capital):
-            for jj in range(N):
+            for jj in range(n_prod_states):
                 incomeW[jj, ii, d] = (
                     interest_rate * capital_grid[ii]
-                    + z[jj] * eff[d] * policy_labor[jj, ii, d]
+                    + prod_states[jj] * efficiency[d] * policy_labor[jj, ii, d]
                 )
 
-    pop = reshape_as_vector(gkW, gkR, N, age_max, age_retire, n_gridpoints_capital)
+    pop = reshape_as_vector(
+        gkW, gkR, n_prod_states, age_max, age_retire, n_gridpoints_capital
+    )
     income = reshape_as_vector(
-        incomeW, incomeR, N, age_max, age_retire, n_gridpoints_capital
+        incomeW, incomeR, n_prod_states, age_max, age_retire, n_gridpoints_capital
     )
 
     gini_index, _, _ = gini(pop, income)

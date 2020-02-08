@@ -1,7 +1,7 @@
 import numpy as np
 
-from src.model_code.within_period import _get_consumption
-from src.model_code.within_period import _get_labor_input
+from src.model_code.within_period import get_consumption
+from src.model_code.within_period import get_labor_input
 from src.model_code.within_period import util
 
 
@@ -16,13 +16,60 @@ def solve_by_backward_induction(
     neg,
     duration_retired,
     duration_working,
-    n_states_productivity,
-    tax_rate,
+    n_prod_states,
+    income_tax_rate,
     beta,
-    z,
-    eff,
-    tran,
+    prod_states,
+    efficiency,
+    transition_prod_states,
 ):
+    """ Calculate household policy functions.
+
+    Arguments
+    ---------
+        interest_rate: np.float64
+            Current interest rate on capital holdings
+        wage_rate: np.float64
+            Current wage rate on effective labor input
+        capital_grid: np.array(n_gridpoints_capital)
+            Asset grid
+        n_gridpoints_capital: int
+            Number of grid points of capital grid
+        sigma: np.float64
+            Inverse of inter-temporal elasticity of substitution
+        gamma: np.float64
+            Weight of consumption utility vs. leisure utility
+        pension_benefit: np.float64
+            Income from pension benefits
+        neg: np.float64
+            Very small number
+        duration_working: int
+            Length of working period
+        duration_retired: int
+            Length of retirement period
+        n_prod_states: int
+            Number of idiosyncratic productivity states
+        income_tax_rate: np.float64
+            Tax rate on labor income
+        beta: np.float64
+            Time discount factor
+        prod_states: np.float64
+            Current idiosyncratic productivity state
+        efficiency: np.float64
+            Age-dependent labor efficiency multiplier
+        transition_prod_states: np.array(n_prod_states, n_prod_states)
+            Transition probabilities for idiosyncratic productivity states
+    Returns
+    -------
+        policy_capital_working: np.array(n_prod_states, n_gridpoints_capital, duration_working)
+            Savings policy function for working age agents (storing optimal asset choices by
+            index on asset grid as int)
+        policy_capital_retired: np.array(n_gridpoints_capital, duration_retired)
+            Savings policy function for retired agents  (storing optimal asset choices by
+            index on asset grid as int)
+        policy_labor:  np.array(n_prod_states, n_gridpoints_capital, duration_working)
+            Labor supply policy function (storing optimal hours worked as np.float64)
+    """
 
     # Initializations for backward induction
     value_retired = np.zeros((n_gridpoints_capital, duration_retired), dtype=np.float64)
@@ -31,15 +78,13 @@ def solve_by_backward_induction(
     )
 
     value_working = np.zeros(
-        (n_states_productivity, n_gridpoints_capital, duration_working),
-        dtype=np.float64,
+        (n_prod_states, n_gridpoints_capital, duration_working), dtype=np.float64,
     )
     policy_capital_working = np.zeros(
-        (n_states_productivity, n_gridpoints_capital, duration_working), dtype=np.int8
+        (n_prod_states, n_gridpoints_capital, duration_working), dtype=np.int8
     )
     policy_labor = np.zeros(
-        (n_states_productivity, n_gridpoints_capital, duration_working),
-        dtype=np.float64,
+        (n_prod_states, n_gridpoints_capital, duration_working), dtype=np.float64,
     )
 
     ############################################################
@@ -72,15 +117,15 @@ def solve_by_backward_induction(
                 assets_next_period = capital_grid[assets_next_period_idx]
 
                 # Instantaneous utility
-                consumption = _get_consumption(
+                consumption = get_consumption(
                     assets_this_period=assets_this_period,
                     assets_next_period=assets_next_period,
                     pension_benefit=pension_benefit,
                     labor_input=np.float64(0.0),
                     interest_rate=interest_rate,
                     wage_rate=wage_rate,
-                    tax_rate=tax_rate,
-                    productivity=np.float64(0.0),
+                    income_tax_rate=income_tax_rate,
+                    prod_states=np.float64(0.0),
                     efficiency=np.float64(0.0),
                 )
 
@@ -110,7 +155,7 @@ def solve_by_backward_induction(
 
     # Working households
     for age in range(duration_working - 1, -1, -1):
-        for e in range(n_states_productivity):
+        for e in range(n_prod_states):
             for assets_this_period_idx in range(n_gridpoints_capital):
 
                 # Initialize right-hand side of Bellman equation
@@ -127,14 +172,14 @@ def solve_by_backward_induction(
                     assets_next_period = capital_grid[assets_next_period_idx]
 
                     # Optimal labor supply
-                    lab = _get_labor_input(
+                    lab = get_labor_input(
                         assets_this_period=assets_this_period,
                         assets_next_period=assets_next_period,
                         interest_rate=interest_rate,
                         wage_rate=wage_rate,
-                        tax_rate=tax_rate,
-                        productivity=z[e],
-                        efficiency=eff[age],
+                        income_tax_rate=income_tax_rate,
+                        productivity=prod_states[e],
+                        efficiency=efficiency[age],
                         gamma=gamma,
                     )
 
@@ -145,16 +190,16 @@ def solve_by_backward_induction(
                         lab = 0
 
                     # Instantaneous utility
-                    consumption = _get_consumption(
+                    consumption = get_consumption(
                         assets_this_period=assets_this_period,
                         assets_next_period=assets_next_period,
                         pension_benefit=0,
                         labor_input=lab,
                         interest_rate=interest_rate,
                         wage_rate=wage_rate,
-                        tax_rate=tax_rate,
-                        productivity=z[e],
-                        efficiency=eff[age],
+                        income_tax_rate=income_tax_rate,
+                        productivity=prod_states[e],
+                        efficiency=efficiency[age],
                     )
 
                     if consumption <= 0:
@@ -176,9 +221,9 @@ def solve_by_backward_induction(
                         )
                     else:
                         v0 = flow_utility + beta * (
-                            tran[e, 0]
+                            transition_prod_states[e, 0]
                             * value_working[0, assets_next_period_idx, age + 1]
-                            + tran[e, 1]
+                            + transition_prod_states[e, 1]
                             * value_working[1, assets_next_period_idx, age + 1]
                         )
 
@@ -195,39 +240,86 @@ def solve_by_backward_induction(
 
 
 # @nb.njit
-def aggregate(
+def aggregate_readable(
     policy_capital_working,
     policy_capital_retired,
     policy_labor,
     age_max,
-    n_states_productivity,
+    n_prod_states,
     n_gridpoints_capital,
     duration_working,
-    z_init,
-    tran,
-    eff,
+    productivity_init,
+    transition_prod_states,
+    efficiency,
     capital_grid,
     mass,
     duration_retired,
-    n,
-    z,
+    population_growth_rate,
+    prod_states,
 ):
-    ############################################################################
-    # Aggregate capital stock and employment
-    ############################################################################
+    """ Calculate aggregate variables and cross-sectional distribution from HH policy functions.
+
+    Arguments
+    ---------
+        policy_capital_working: np.array(n_prod_states, n_gridpoints_capital, duration_working)
+            Savings policy function for working age agents (storing optimal asset choices by
+            index on asset grid as int)
+        policy_capital_retired: np.array(n_gridpoints_capital, duration_retired)
+            Savings policy function for retired agents  (storing optimal asset choices by
+            index on asset grid as int)
+        policy_labor:  np.array(n_prod_states, n_gridpoints_capital, duration_working)
+            Labor supply policy function (storing optimal hours worked as np.float64)
+        age_max: int
+            Maximum age of agents
+        n_prod_states: int
+            Number of idiosyncratic productivity states
+        n_gridpoints_capital: int
+            Number of grid points of capital grid
+        duration_working: int
+            Length of working period
+        productivity_init: np.array(2, 1)
+            Initial distribution of idiosyncratic productivity states
+        transition_prod_states: np.array(n_prod_states, n_prod_states)
+            Transition probabilities for idiosyncratic productivity states
+        efficiency: np.float64
+            Age-dependent labor efficiency multiplier
+        capital_grid: np.array(n_gridpoints_capital)
+            Asset grid
+        mass: np.array(age_max, 1)
+            Vector of relative shares of agents by age
+        duration_retired: int
+            Length of retirement period
+        population_growth_rate: np.float64
+            Annual population growth rate
+        prod_states: np.float64
+            Current idiosyncratic productivity state
+    Returns
+    -------
+        aggregate_capital_out: np.float64
+            Aggregate capital stock derived from household policy functions and
+            cross-sectional distribution
+        aggregate_labor_out: np.float64
+            Aggregate labor supply derived from household policy functions and
+            cross-sectional distribution
+        gk: np.array( , )
+            ...
+        gkW: np.array(n_prod_states, duration_working, n_gridpoints_capital)
+            ...
+        gkR np.array(duration_retired, n_gridpoints_capital)
+            ...
+    """
 
     # Aggregate capital for each generation
     kgen = np.zeros((age_max, 1), dtype=np.float64)
 
     # Distribution of workers over capital and shocks for each working cohort
     gkW = np.zeros(
-        (n_states_productivity, n_gridpoints_capital, duration_working),
-        dtype=np.float64,
+        (n_prod_states, n_gridpoints_capital, duration_working), dtype=np.float64,
     )
 
     # Newborns
-    gkW[0, 0, 0] = z_init[0] * mass[0]
-    gkW[1, 0, 0] = z_init[1] * mass[0]
+    gkW[0, 0, 0] = productivity_init[0] * mass[0]
+    gkW[1, 0, 0] = productivity_init[1] * mass[0]
 
     # Distribution of agents over capital for each cohort (pooling together
     # both productivity shocks). This would be useful when computing total
@@ -247,33 +339,37 @@ def aggregate(
     # Workers
     for ind_age in range(duration_working):  # iterations over cohorts
         for ind_k in range(n_gridpoints_capital):  # current asset holdings
-            for ind_e in range(n_states_productivity):  # current shock
+            for ind_e in range(n_prod_states):  # current shock
 
                 ind_kk = policy_capital_working[
                     ind_e, ind_k, ind_age
                 ]  # optimal saving (as index in asset grid)
 
-                for ind_ee in range(n_states_productivity):  # tomorrow's shock
+                for ind_ee in range(n_prod_states):  # tomorrow's shock
 
                     if ind_age < duration_working - 1:
                         gkW[ind_ee, ind_kk, ind_age + 1] += (
-                            tran[ind_e, ind_ee] * gkW[ind_e, ind_k, ind_age] / (1 + n)
+                            transition_prod_states[ind_e, ind_ee]
+                            * gkW[ind_e, ind_k, ind_age]
+                            / (1 + population_growth_rate)
                         )
                     elif (
                         ind_age == duration_working - 1
-                    ):  # need to be careful because workers transit to retirees
+                    ):  # need to be careful because workers transition to retirees
                         gkR[ind_kk, 0] += (
-                            tran[ind_e, ind_ee] * gkW[ind_e, ind_k, ind_age] / (1 + n)
+                            transition_prod_states[ind_e, ind_ee]
+                            * gkW[ind_e, ind_k, ind_age]
+                            / (1 + population_growth_rate)
                         )
 
         # Aggregate labor by age
         labgen[ind_age] = 0
 
         for ind_k in range(n_gridpoints_capital):
-            for ind_e in range(n_states_productivity):
+            for ind_e in range(n_prod_states):
                 labgen[ind_age] += (
-                    z[ind_e]
-                    * eff[ind_age]
+                    prod_states[ind_e]
+                    * efficiency[ind_age]
                     * policy_labor[ind_e, ind_k, ind_age]
                     * gkW[ind_e, ind_k, ind_age]
                 )
@@ -293,7 +389,9 @@ def aggregate(
             ind_kk = policy_capital_retired[
                 ind_k, ind_age
             ]  # optimal saving (as index in asset grid)
-            gkR[ind_kk, ind_age + 1] += gkR[ind_k, ind_age] / (1 + n)
+            gkR[ind_kk, ind_age + 1] += gkR[ind_k, ind_age] / (
+                1 + population_growth_rate
+            )
 
         # Distribution by capital and age
         gk[:, duration_working + ind_age] = gkR[:, ind_age + 1]
@@ -302,7 +400,7 @@ def aggregate(
             capital_grid, gk[:, duration_working + ind_age]
         )
 
-    k1 = np.sum(kgen)
-    l1 = np.sum(labgen)
+    aggregate_capital_out = np.sum(kgen)
+    aggregate_labor_out = np.sum(labgen)
 
-    return k1, l1, gk, gkW, gkR
+    return aggregate_capital_out, aggregate_labor_out, gk, gkW, gkR
