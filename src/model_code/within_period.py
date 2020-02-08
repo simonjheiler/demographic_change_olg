@@ -38,14 +38,15 @@ def get_labor_input(
             Optimal hours worked
     """
     labor_input = (
-        gamma * (1 - income_tax_rate) * productivity * efficiency * wage_rate
-        - (1 - gamma) * ((1 + interest_rate) * assets_this_period - assets_next_period)
-    ) / ((1 - income_tax_rate) * productivity * efficiency * wage_rate)
+        gamma * (1.0 - income_tax_rate) * productivity * efficiency * wage_rate
+        - (1.0 - gamma)
+        * ((1.0 + interest_rate) * assets_this_period - assets_next_period)
+    ) / ((1.0 - income_tax_rate) * productivity * efficiency * wage_rate)
 
-    if labor_input > 1:
-        labor_input = 1
-    elif labor_input < 0:
-        labor_input = 0
+    if labor_input > 1.0:
+        labor_input = 1.0
+    elif labor_input < 0.0:
+        labor_input = 0.0
 
     return labor_input
 

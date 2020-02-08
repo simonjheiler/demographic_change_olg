@@ -16,41 +16,46 @@ from src.model_code.solve import solve_by_backward_induction
 if __name__ == "__main__":
 
     # Load parameters
-    efficiency = pd.read_csv(ppj("IN_DATA", "ef.csv"))
-    efficiency = np.array(efficiency.values, dtype=float)
-    sr = pd.read_csv(ppj("IN_DATA", "sr.csv"))
-    sr = np.array(sr.values, dtype=float)
+    efficiency = np.squeeze(
+        np.array(pd.read_csv(ppj("IN_DATA", "ef.csv")).values, dtype=float)
+    )
+    survival_rates = np.array(pd.read_csv(ppj("IN_DATA", "sr.csv")).values, dtype=float)
 
     with open(ppj("IN_MODEL_SPECS", "setup.json")) as json_file:
         params = json.load(json_file)
 
-    alpha = params["alpha"]
-    beta = params["beta"]
-    sigma = params["sigma"]
-    delta = params["delta"]
-    reform = params["reform"]
-    age_max = params["age_max"]
-    age_retire = params["age_retire"]
-    population_growth_rate = params["population_growth_rate"]
-    n_prod_states = params["n_prod_states"]
-
-    duration_retired = age_max - age_retire + 1  # length of retirement
-    duration_working = age_retire - 1  # length of working life
-
-    # Distribution of newborns over shocks
+    alpha = np.float64(params["alpha"])
+    beta = np.float64(params["beta"])
+    sigma = np.float64(params["sigma"])
+    reform = np.float64(params["reform"])
+    age_max = np.int32(params["age_max"])
+    age_retire = np.int32(params["age_retire"])
+    population_growth_rate = np.float64(params["population_growth_rate"])
+    productivity_growth_rate = np.float64(params["productivity_growth_rate"])
+    n_prod_states = np.int32(params["n_prod_states"])
+    zeta = np.float64(params["zeta"])
+    psi = np.float64(params["psi"])
+    delta_k = np.float64(params["delta_k"])
+    delta_hc = np.float64(params["delta_hc"])
     productivity_init = np.array(params["z_init"], dtype=np.float64)
-
     transition_prod_states = np.array(
         params["transition_prod_states"], dtype=np.float64
     )
+    capital_min = np.float64(params["capital_min"])
+    capital_max = np.float64(params["capital_max"])
+    n_gridpoints_capital = np.int32(params["n_gridpoints_capital"])
+    income_tax_rate = np.float64(params["income_tax_rate"])
+    aggregate_capital_in = np.float64(params["aggregate_capital_init"])
+    aggregate_labor_in = np.float64(params["aggregate_labor_init"])
+    prod_states = np.array(params["prod_states"], dtype=np.float64)
+    gamma = np.float64(params["gamma"])
 
-    # Capital grid
-    capital_min = params["capital_min"]  # minimum value of capital grid
-    capital_max = params["capital_max"]  # maximum value of capital grid
-    n_gridpoints_capital = params["n_gridpoints_capital"]  # number of grid points
+    # calculate derived parameters
     capital_grid = np.linspace(
         capital_min, capital_max, n_gridpoints_capital, dtype=np.float64
     )
+    duration_retired = age_max - age_retire + 1  # length of retirement
+    duration_working = age_retire - 1  # length of working life
 
     # Measure of each generation
     mass = np.ones((age_max, 1), dtype=np.float64)
@@ -60,13 +65,9 @@ if __name__ == "__main__":
     # Normalized measure of each generation (sum up to 1)
     mass = mass / sum(mass)
 
-    # Social Security tax rate and initial guesses
+    # Adjust parameters in case of reform
     if reform == 0:
-        income_tax_rate = np.float64(0.11)
-        aggregate_capital_in = np.float64(3.3254)
-        aggregate_labor_in = np.float64(0.3414)
-        prod_states = np.array([3.0, 0.5], dtype=np.float64)
-        gamma = np.float64(0.42)
+        pass
     elif reform == 1:
         income_tax_rate = np.float64(0.0)
         aggregate_capital_in = np.float64(4.244)
@@ -127,7 +128,7 @@ if __name__ == "__main__":
             alpha
             * (aggregate_capital_in ** (alpha - 1))
             * (aggregate_labor_in ** (1 - alpha))
-            - delta
+            - delta_k
         )
         wage_rate = np.float64(
             (1 - alpha)
@@ -211,6 +212,23 @@ if __name__ == "__main__":
     # Display results and calculate summary statistics
     ################################################################
 
+    # Calculate equilibrium prices and pension benefits
+    interest_rate = (
+        alpha
+        * (aggregate_capital_in ** (alpha - 1))
+        * (aggregate_labor_in ** (1 - alpha))
+        - delta_k
+    )
+    wage_rate = (
+        (1 - alpha) * (aggregate_capital_in ** alpha) * (aggregate_labor_in ** (-alpha))
+    )
+    pension_benefit = np.float64(
+        income_tax_rate
+        * wage_rate
+        * aggregate_labor_in
+        / np.sum(mass[age_retire - 1 :])
+    )
+
     # Display equilibrium results
     print(
         "aggregate_capital | aggregate_labor | wage_rate | interest_rate | pension_benefit "
@@ -223,17 +241,6 @@ if __name__ == "__main__":
             interest_rate,
             pension_benefit,
         ]
-    )
-
-    # Calculate equilibrium prices
-    interest_rate = (
-        alpha
-        * (aggregate_capital_in ** (alpha - 1))
-        * (aggregate_labor_in ** (1 - alpha))
-        - delta
-    )
-    wage_rate = (
-        (1 - alpha) * (aggregate_capital_in ** alpha) * (aggregate_labor_in ** (-alpha))
     )
 
     # Check mass of agents at upper bound of asset grid
