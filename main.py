@@ -5,9 +5,12 @@ import pandas as pd
 
 from bld.project_paths import project_paths_join as ppj
 from src.model_code.auxiliary import gini
-from src.model_code.auxiliary import reshape_as_vector
-from src.model_code.solve import aggregate_readable as aggregate
-from src.model_code.solve import solve_by_backward_induction
+from src.model_code.solve import aggregate_hc as aggregate
+from src.model_code.solve import (
+    solve_by_backward_induction_hc as solve_by_backward_induction,
+)
+
+# from src.model_code.auxiliary import reshape_as_vector
 
 #####################################################
 # SCRIPT
@@ -44,6 +47,10 @@ if __name__ == "__main__":
     capital_min = np.float64(params["capital_min"])
     capital_max = np.float64(params["capital_max"])
     n_gridpoints_capital = np.int32(params["n_gridpoints_capital"])
+    hc_min = np.float64(params["hc_min"])
+    hc_max = np.float64(params["hc_max"])
+    n_gridpoints_hc = np.int32(params["n_gridpoints_hc"])
+    hc_init = np.float64(params["hc_init"])
     income_tax_rate = np.float64(params["income_tax_rate"])
     aggregate_capital_in = np.float64(params["aggregate_capital_init"])
     aggregate_labor_in = np.float64(params["aggregate_labor_init"])
@@ -54,6 +61,7 @@ if __name__ == "__main__":
     capital_grid = np.linspace(
         capital_min, capital_max, n_gridpoints_capital, dtype=np.float64
     )
+    hc_grid = np.linspace(hc_min, hc_max, n_gridpoints_hc, dtype=np.float64)
     duration_retired = age_max - age_retire + 1  # length of retirement
     duration_working = age_retire - 1  # length of working life
 
@@ -146,49 +154,49 @@ if __name__ == "__main__":
         # Solve for policy functions
         ############################################################################
 
-        (
-            policy_capital_working,
-            policy_capital_retired,
-            policy_labor,
-        ) = solve_by_backward_induction(
+        (policy_capital, policy_hc, policy_labor,) = solve_by_backward_induction(
             interest_rate=interest_rate,
             wage_rate=wage_rate,
             capital_grid=capital_grid,
             n_gridpoints_capital=n_gridpoints_capital,
+            hc_grid=hc_grid,
+            n_gridpoints_hc=n_gridpoints_hc,
             sigma=sigma,
             gamma=gamma,
             pension_benefit=pension_benefit,
             neg=neg,
-            duration_working=duration_working,
-            duration_retired=duration_retired,
-            n_prod_states=n_prod_states,
+            age_max=age_max,
             income_tax_rate=income_tax_rate,
             beta=beta,
-            prod_states=prod_states,
             efficiency=efficiency,
-            transition_prod_states=transition_prod_states,
+            zeta=zeta,
+            psi=psi,
+            delta_hc=delta_hc,
         )
 
         ############################################################################
         # Aggregate capital stock and employment
         ############################################################################
 
-        aggregate_capital_out, aggregate_labor_out, gk, gkW, gkR = aggregate(
-            policy_capital_working=policy_capital_working,
-            policy_capital_retired=policy_capital_retired,
+        (
+            aggregate_capital_out,
+            aggregate_labor_out,
+            mass_distribution_full,
+            mass_distribution_capital,
+            mass_distribution_hc,
+        ) = aggregate(
+            policy_capital=policy_capital,
+            policy_hc=policy_hc,
             policy_labor=policy_labor,
             age_max=age_max,
-            n_prod_states=n_prod_states,
             n_gridpoints_capital=n_gridpoints_capital,
-            duration_working=duration_working,
-            productivity_init=productivity_init,
-            transition_prod_states=transition_prod_states,
+            hc_init=hc_init,
             efficiency=efficiency,
             capital_grid=capital_grid,
+            n_gridpoints_hc=n_gridpoints_hc,
+            hc_grid=hc_grid,
             mass=mass,
-            duration_retired=duration_retired,
             population_growth_rate=population_growth_rate,
-            prod_states=prod_states,
         )
 
         # Update the guess on capital and labor
@@ -198,7 +206,7 @@ if __name__ == "__main__":
         aggregate_labor_in = 0.95 * aggregate_labor_in + 0.05 * aggregate_labor_out
 
         # Display results
-        print("capital | labor | pension")
+        print("capital | labor | pension ")
         print([aggregate_capital_in, aggregate_labor_in, pension_benefit])
         print("deviation capital | deviation labor")
         print(
@@ -244,35 +252,51 @@ if __name__ == "__main__":
     )
 
     # Check mass of agents at upper bound of asset grid
-    mass_upper_bound = np.sum(gk[-1, :])
+    mass_upper_bound = np.sum(mass_distribution_capital[-1, :])
     print(f"mass of agents at upper bound of asset grid = {mass_upper_bound}")
 
     # Average hours worked
-    h = np.zeros((duration_working, 1))
-    for d in range(duration_working):
-        for ii in range(n_gridpoints_capital):
-            for jj in range(n_prod_states):
-                h[d] += policy_labor[jj, ii, d] * gkW[jj, ii, d]
-        h[d] = h[d] / sum(sum(gkW[:, :, d]))
+    h = np.zeros(age_max)
+    for age in range(age_max):
+        for assets_this_period_index in range(n_gridpoints_capital):
+            for hc_this_period_index in range(n_gridpoints_hc):
+                h[age] += (
+                    policy_labor[assets_this_period_index, hc_this_period_index, age]
+                    * mass_distribution_full[
+                        assets_this_period_index, hc_this_period_index, age
+                    ]
+                )
+        h[age] = h[age] / sum(sum(mass_distribution_full[:, :, age]))
 
     # Gini disposable income
-    incomeR = interest_rate * capital_grid + pension_benefit
-    incomeR = np.tile(incomeR, (duration_retired, 1)).T
+    income_pension = np.zeros(
+        (n_gridpoints_capital, n_gridpoints_hc, age_max), dtype=np.float64
+    )
+    income_pension_tmp = interest_rate * capital_grid + pension_benefit
+    income_pension[:, :, age_retire - 1 :] = np.tile(
+        income_pension_tmp, (n_gridpoints_hc, duration_retired)
+    ).reshape((n_gridpoints_capital, n_gridpoints_hc, duration_retired), order="F")
 
-    incomeW = np.zeros((n_prod_states, n_gridpoints_capital, duration_working))
-    for d in range(duration_working):
-        for ii in range(n_gridpoints_capital):
-            for jj in range(n_prod_states):
-                incomeW[jj, ii, d] = (
-                    interest_rate * capital_grid[ii]
-                    + prod_states[jj] * efficiency[d] * policy_labor[jj, ii, d]
+    income_labor = np.zeros((n_gridpoints_capital, n_gridpoints_hc, age_max))
+    for age in range(age_max):
+        for assets_this_period_index in range(n_gridpoints_capital):
+            for hc_this_period_index in range(n_gridpoints_hc):
+                income_labor[assets_this_period_index, hc_this_period_index, age] = (
+                    interest_rate * capital_grid[assets_this_period_index]
+                    + hc_grid[hc_this_period_index]
+                    * efficiency[age]
+                    * policy_labor[assets_this_period_index, hc_this_period_index, age]
                 )
 
-    pop = reshape_as_vector(
-        gkW, gkR, n_prod_states, age_max, age_retire, n_gridpoints_capital
+    pop = np.squeeze(
+        mass_distribution_full.reshape(
+            (n_gridpoints_capital * n_gridpoints_hc * age_max, 1), order="F"
+        )
     )
-    income = reshape_as_vector(
-        incomeW, incomeR, n_prod_states, age_max, age_retire, n_gridpoints_capital
+    income = np.squeeze(
+        (income_labor + income_pension).reshape(
+            (n_gridpoints_capital * n_gridpoints_hc * age_max, 1), order="F"
+        )
     )
 
     gini_index, _, _ = gini(pop, income)

@@ -37,11 +37,14 @@ def get_labor_input(
         labor_input: np.float64
             Optimal hours worked
     """
-    labor_input = (
-        gamma * (1.0 - income_tax_rate) * productivity * efficiency * wage_rate
-        - (1.0 - gamma)
-        * ((1.0 + interest_rate) * assets_this_period - assets_next_period)
-    ) / ((1.0 - income_tax_rate) * productivity * efficiency * wage_rate)
+    if efficiency == 0.0:
+        labor_input = 0.0
+    else:
+        labor_input = (
+            gamma * (1.0 - income_tax_rate) * productivity * efficiency * wage_rate
+            - (1.0 - gamma)
+            * ((1.0 + interest_rate) * assets_this_period - assets_next_period)
+        ) / ((1.0 - income_tax_rate) * productivity * efficiency * wage_rate)
 
     if labor_input > 1.0:
         labor_input = 1.0
@@ -157,3 +160,34 @@ def hc_accumulation(hc_this_period, hc_effort, zeta, psi, delta_hc):
     )
 
     return hc_next_period
+
+
+@nb.njit
+def get_hc_effort(hc_this_period, hc_next_period, zeta, psi, delta_hc):
+    """ Calculate (implied) effort invested in human capital accumulation.
+
+    Human capital formation technology taken from Ludwig, Schelkle, Vogel (2012),
+    adopted rom Ben-Porath (1967).
+
+    Arguments
+    ---------
+        hc_this_period: np.float64
+            Current level of human capital
+        hc_next_period: np.float64
+            Future level of human capital
+        zeta: np.float64
+            scaling factor (average learning ability)
+        psi: np.float64
+            curvature parameter of hc formation technology
+        delta_hc: np.float64
+            depreciation rate on human capital
+    Returns
+    -------
+        hc_effort: np.float64
+            Effort invested in human capital accumulation
+    """
+    hc_effort = zeta ** (-1) * (hc_next_period - hc_this_period * (1 - delta_hc)) ** (
+        1 / psi
+    )
+
+    return hc_effort

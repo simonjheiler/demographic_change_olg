@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def gini(pop, val, makeplot=False):
+def gini(pop, val, make_plot=False):
     """ GINI computes the Gini coefficient and the Lorentz curve.
 
     Usage:
@@ -90,7 +90,7 @@ def gini(pop, val, makeplot=False):
         gini_coefficient = np.nan
         lorentz_rel = np.nan(1, 4)
         lorentz_abs = np.nan(1, 4)
-        return
+        return gini_coefficient, lorentz_rel, lorentz_abs
 
     assert np.all(pop >= 0) and np.all(
         val >= 0
@@ -123,7 +123,7 @@ def gini(pop, val, makeplot=False):
     # Lorentz curve
     lorentz_rel = [rel_pop, rel_z]
     lorentz_abs = [pop, z]
-    if makeplot:
+    if make_plot:
         # area(relpop, relz, 'FaceColor', [0.5, 0.5, 1.0])  # the Lorentz curve
         # plot([0, 1], [0, 1], '--k')  # 45 degree line
         # axis tight  # ranges of abscissa and ordinate are by definition exactly [0,1]
@@ -149,13 +149,13 @@ def reshape_as_vector(
             Input for working age agents
         in_retired: np.array(duration_retired, n_gridpoints_capital)
             Input for retired agents
-        n_prod_states: int
+        n_prod_states: np.int32
             Number of idiosyncratic productivity states
-        age_max: int
+        age_max: np.int32
             Maximum age of agents
-        age_retire: int
+        age_retire: np.int32
             Retirement age
-        n_gridpoints_capital: int
+        n_gridpoints_capital: np.int32
             Number of grid points of capital grid
     Returns
     -------
