@@ -3,7 +3,7 @@
   "sigma": 2.0,
   "alpha": 0.36,
   "delta": 0.06,
-  "reform": 0,
+  "reform": 3,
   "age_max": 66,
   "age_retire": 46,
   "population_growth_rate": 0.011,
@@ -24,5 +24,5 @@
   ],
   "capital_min": 0.001,
   "capital_max": 30.0,
-  "n_gridpoints_capital": 10
+  "n_gridpoints_capital": 100
 }

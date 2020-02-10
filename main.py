@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
     # Load parameters
     efficiency = pd.read_csv(ppj("IN_DATA", "ef.csv"))
-    efficiency = np.array(efficiency.values, dtype=float)
+    efficiency = np.squeeze(np.array(efficiency.values, dtype=float))
     sr = pd.read_csv(ppj("IN_DATA", "sr.csv"))
     sr = np.array(sr.values, dtype=float)
 
@@ -81,8 +81,8 @@ if __name__ == "__main__":
         gamma = np.float64(0.42)
     elif reform == 3:
         income_tax_rate = np.float64(0.0)
-        aggregate_capital_in = np.float64(1.343)
-        aggregate_labor_in = np.float64(0.1691)
+        aggregate_capital_in = np.float64(1.2520345663346262)
+        aggregate_labor_in = np.float64(0.17248178791432187)
         prod_states = np.array([0.5, 0.5], dtype=np.float64)
         gamma = np.float64(0.42)
     elif reform == 4:
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     tolerance_capital = 1e-4
     tolerance_labor = 1e-4
 
-    nq = 5  # Max number of iterations
+    nq = 50  # Max number of iterations
     q = 0  # Counter for iterations
 
     aggregate_capital_out = aggregate_capital_in + 10

@@ -1,3 +1,4 @@
+import numba as nb
 import numpy as np
 
 from src.model_code.within_period import get_consumption
@@ -5,6 +6,7 @@ from src.model_code.within_period import get_labor_input
 from src.model_code.within_period import util
 
 
+@nb.njit
 def solve_by_backward_induction(
     interest_rate,
     wage_rate,
@@ -53,10 +55,10 @@ def solve_by_backward_induction(
             Tax rate on labor income
         beta: np.float64
             Time discount factor
-        prod_states: np.float64
-            Current idiosyncratic productivity state
-        efficiency: np.float64
-            Age-dependent labor efficiency multiplier
+        prod_states: np.array(n_prod_states)
+            Vector of idiosyncratic productivity states
+        efficiency: np.array(age_max)
+            Vector of age-dependent labor efficiency multiplier
         transition_prod_states: np.array(n_prod_states, n_prod_states)
             Transition probabilities for idiosyncratic productivity states
     Returns
@@ -94,9 +96,9 @@ def solve_by_backward_induction(
     # Retired households
 
     # Last period utility
-    consumption = (1 + interest_rate) * capital_grid + pension_benefit
-    flow_utility = (consumption ** ((1 - sigma) * gamma)) / (1 - sigma)
-    value_retired[:, duration_retired - 1] = flow_utility
+    consumption_last = (1 + interest_rate) * capital_grid + pension_benefit
+    flow_utility_last = (consumption_last ** ((1 - sigma) * gamma)) / (1 - sigma)
+    value_retired[:, duration_retired - 1] = flow_utility_last
 
     for age in range(duration_retired - 2, -1, -1):  # age
 
@@ -129,7 +131,7 @@ def solve_by_backward_induction(
                     efficiency=np.float64(0.0),
                 )
 
-                if consumption <= 0:
+                if consumption <= 0.0:
                     flow_utility = neg
                     assets_next_period_idx = n_gridpoints_capital - 1
                 else:
@@ -179,8 +181,8 @@ def solve_by_backward_induction(
                         interest_rate=interest_rate,
                         wage_rate=wage_rate,
                         income_tax_rate=income_tax_rate,
-                        productivity=prod_states[e],
-                        efficiency=efficiency[age],
+                        productivity=np.float64(prod_states[e]),
+                        efficiency=np.float64(efficiency[age]),
                         gamma=gamma,
                     )
 
@@ -193,11 +195,11 @@ def solve_by_backward_induction(
                         interest_rate=interest_rate,
                         wage_rate=wage_rate,
                         income_tax_rate=income_tax_rate,
-                        productivity=prod_states[e],
-                        efficiency=efficiency[age],
+                        productivity=np.float64(prod_states[e]),
+                        efficiency=np.float64(efficiency[age]),
                     )
 
-                    if consumption <= 0:
+                    if consumption <= 0.0:
                         flow_utility = neg
                         assets_next_period_idx = n_gridpoints_capital - 1
                     else:
@@ -277,8 +279,8 @@ def aggregate_readable(
             Initial distribution of idiosyncratic productivity states
         transition_prod_states: np.array(n_prod_states, n_prod_states)
             Transition probabilities for idiosyncratic productivity states
-        efficiency: np.float64
-            Age-dependent labor efficiency multiplier
+        efficiency: np.array(age_max)
+            Vector of age-dependent labor efficiency multiplier
         capital_grid: np.array(n_gridpoints_capital)
             Asset grid
         mass: np.array(age_max, 1)
@@ -287,8 +289,8 @@ def aggregate_readable(
             Length of retirement period
         population_growth_rate: np.float64
             Annual population growth rate
-        prod_states: np.float64
-            Current idiosyncratic productivity state
+        prod_states: np.array(n_prod_states)
+            Vector of idiosyncratic productivity states
     Returns
     -------
         aggregate_capital_out: np.float64
