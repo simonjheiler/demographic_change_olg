@@ -1,8 +1,8 @@
 {
-  "beta": 0.993,
+  "beta": 0.97,
   "sigma": 2.0,
-  "alpha": 0.33,
-  "delta_k": 0.038,
+  "alpha": 0.36,
+  "delta_k": 0.06,
   "reform": 0,
   "age_max": 66,
   "age_retire": 46,
@@ -24,24 +24,24 @@
     0.7963
   ],
   "capital_min": 0.001,
-  "capital_max": 30.0,
-  "n_gridpoints_capital": 10,
-  "hc_min": 1.0,
-  "hc_max": 3.0,
-  "n_gridpoints_hc": 5,
-  "hc_init": 1.0,
+  "capital_max": 50.0,
+  "n_gridpoints_capital": 100,
+  "hc_min": 2.0,
+  "hc_max": 2.0,
+  "n_gridpoints_hc": 1,
+  "hc_init": 2.0,
   "delta_hc": 0.008,
   "psi": 0.65,
   "zeta": 0.16,
   "income_tax_rate": 0.11,
-  "aggregate_capital_init": 3.3254,
-  "aggregate_labor_init": 0.3414,
+  "aggregate_capital_init": 1.209551542349482,
+  "aggregate_labor_init": 0.160261889093575,
   "gamma": 0.42,
   "prod_states": [
-    3.0,
-    0.5
+    1.0,
+    1.0
   ],
   "tolerance_capital": 0.0001,
   "tolerance_labor": 0.0001,
-  "max_iterations_inner": 5
+  "max_iterations_inner": 50
 }

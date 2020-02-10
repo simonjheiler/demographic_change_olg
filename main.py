@@ -6,8 +6,16 @@ import pandas as pd
 from bld.project_paths import project_paths_join as ppj
 from src.model_code.auxiliary import gini
 from src.model_code.auxiliary import reshape_as_vector  # noqa:F401
-from src.model_code.solve import aggregate_hc
-from src.model_code.solve import solve_by_backward_induction_hc_iter
+from src.model_code.solve import (
+    aggregate_baseline_readable as aggregate_baseline,
+)  # noqa:F401
+from src.model_code.solve import aggregate_hc_readable as aggregate_hc  # noqa:F401
+from src.model_code.solve import (
+    solve_by_backward_induction_hc_iter as solve_hc,
+)  # noqa:F401
+from src.model_code.solve import (
+    solve_by_backward_induction_numba as solve_baseline,
+)  # noqa:F401
 
 #####################################################
 # SCRIPT
@@ -151,28 +159,50 @@ if __name__ == "__main__":
 
         (
             policy_capital_working,
-            policy_hc_working,
             policy_labor_working,
             policy_capital_retired,
-        ) = solve_by_backward_induction_hc_iter(
+        ) = solve_baseline(
             interest_rate=interest_rate,
             wage_rate=wage_rate,
             capital_grid=capital_grid,
             n_gridpoints_capital=n_gridpoints_capital,
-            hc_grid=hc_grid,
-            n_gridpoints_hc=n_gridpoints_hc,
             sigma=sigma,
             gamma=gamma,
             pension_benefit=pension_benefit,
             neg=neg,
-            age_max=age_max,
-            age_retire=age_retire,
+            duration_retired=duration_retired,
+            duration_working=duration_working,
+            n_prod_states=n_prod_states,
             income_tax_rate=income_tax_rate,
             beta=beta,
-            zeta=zeta,
-            psi=psi,
-            delta_hc=delta_hc,
+            prod_states=prod_states,
+            efficiency=efficiency,
+            transition_prod_states=transition_prod_states,
         )
+        # (
+        #     policy_capital_working,
+        #     policy_hc_working,
+        #     policy_labor_working,
+        #     policy_capital_retired,
+        # ) = solve_hc(
+        #     interest_rate=interest_rate,
+        #     wage_rate=wage_rate,
+        #     capital_grid=capital_grid,
+        #     n_gridpoints_capital=n_gridpoints_capital,
+        #     hc_grid=hc_grid,
+        #     n_gridpoints_hc=n_gridpoints_hc,
+        #     sigma=sigma,
+        #     gamma=gamma,
+        #     pension_benefit=pension_benefit,
+        #     neg=neg,
+        #     age_max=age_max,
+        #     age_retire=age_retire,
+        #     income_tax_rate=income_tax_rate,
+        #     beta=beta,
+        #     zeta=zeta,
+        #     psi=psi,
+        #     delta_hc=delta_hc,
+        # )
 
         ############################################################################
         # Aggregate capital stock and employment
@@ -183,23 +213,46 @@ if __name__ == "__main__":
             aggregate_labor_out,
             mass_distribution_full_working,
             mass_distribution_capital_working,
-            mass_distribution_hc_working,
             mass_distribution_full_retired,
-        ) = aggregate_hc(
+        ) = aggregate_baseline(
             policy_capital_working=policy_capital_working,
-            policy_hc_working=policy_hc_working,
-            policy_labor_working=policy_labor_working,
             policy_capital_retired=policy_capital_retired,
+            policy_labor_working=policy_labor_working,
             age_max=age_max,
-            age_retire=age_retire,
+            n_prod_states=n_prod_states,
             n_gridpoints_capital=n_gridpoints_capital,
-            hc_init=hc_init,
+            duration_working=duration_working,
+            productivity_init=productivity_init,
+            transition_prod_states=transition_prod_states,
+            efficiency=efficiency,
             capital_grid=capital_grid,
-            n_gridpoints_hc=n_gridpoints_hc,
-            hc_grid=hc_grid,
             mass=mass,
+            duration_retired=duration_retired,
             population_growth_rate=population_growth_rate,
+            prod_states=prod_states,
         )
+        # (
+        #     aggregate_capital_out,
+        #     aggregate_labor_out,
+        #     mass_distribution_full_working,
+        #     mass_distribution_capital_working,
+        #     mass_distribution_hc_working,
+        #     mass_distribution_full_retired,
+        # ) = aggregate_hc(
+        #     policy_capital_working=policy_capital_working,
+        #     policy_hc_working=policy_hc_working,
+        #     policy_labor_working=policy_labor_working,
+        #     policy_capital_retired=policy_capital_retired,
+        #     age_max=age_max,
+        #     age_retire=age_retire,
+        #     n_gridpoints_capital=n_gridpoints_capital,
+        #     hc_init=hc_init,
+        #     capital_grid=capital_grid,
+        #     n_gridpoints_hc=n_gridpoints_hc,
+        #     hc_grid=hc_grid,
+        #     mass=mass,
+        #     population_growth_rate=population_growth_rate,
+        # )
 
         # Update the guess on capital and labor
         aggregate_capital_in = (
