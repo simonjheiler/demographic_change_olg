@@ -5,12 +5,9 @@ import pandas as pd
 
 from bld.project_paths import project_paths_join as ppj
 from src.model_code.auxiliary import gini
-from src.model_code.solve import aggregate_hc as aggregate
-from src.model_code.solve import (
-    solve_by_backward_induction_hc as solve_by_backward_induction,
-)
-
-# from src.model_code.auxiliary import reshape_as_vector
+from src.model_code.auxiliary import reshape_as_vector  # noqa:F401
+from src.model_code.solve import aggregate_hc
+from src.model_code.solve import solve_by_backward_induction_hc_iter
 
 #####################################################
 # SCRIPT
@@ -56,14 +53,17 @@ if __name__ == "__main__":
     aggregate_labor_in = np.float64(params["aggregate_labor_init"])
     prod_states = np.array(params["prod_states"], dtype=np.float64)
     gamma = np.float64(params["gamma"])
+    tolerance_capital = np.float64(params["tolerance_capital"])
+    tolerance_labor = np.float64(params["tolerance_labor"])
+    max_iterations_inner = np.int32(params["max_iterations_inner"])
 
     # calculate derived parameters
     capital_grid = np.linspace(
         capital_min, capital_max, n_gridpoints_capital, dtype=np.float64
     )
     hc_grid = np.linspace(hc_min, hc_max, n_gridpoints_hc, dtype=np.float64)
-    duration_retired = age_max - age_retire + 1  # length of retirement
-    duration_working = age_retire - 1  # length of working life
+    duration_retired = age_max - age_retire + 1
+    duration_working = age_retire - 1
 
     # Measure of each generation
     mass = np.ones((age_max, 1), dtype=np.float64)
@@ -107,12 +107,7 @@ if __name__ == "__main__":
         prod_states = np.array([3.0, 0.5], dtype=np.float64)
         gamma = np.float64(0.999)
 
-    # Tolerance levels for capital, labor and pension benefits
-    tolerance_capital = 1e-4
-    tolerance_labor = 1e-4
-
-    nq = 5  # Max number of iterations
-    q = 0  # Counter for iterations
+    num_iterations_inner = 0  # Counter for iterations
 
     aggregate_capital_out = aggregate_capital_in + 10
     aggregate_labor_out = aggregate_labor_in + 10
@@ -122,14 +117,14 @@ if __name__ == "__main__":
     # Loop over capital, labor and pension benefits
     ################################################################
 
-    while (q < nq) and (
+    while (num_iterations_inner < max_iterations_inner) and (
         (abs(aggregate_capital_out - aggregate_capital_in) > tolerance_capital)
         or (abs(aggregate_labor_out - aggregate_labor_in) > tolerance_labor)
     ):
 
-        q = q + 1
+        num_iterations_inner += 1
 
-        print(f"Iteration {q} out of {nq}")
+        print(f"Iteration {num_iterations_inner} out of {max_iterations_inner}")
 
         # Calculate factor prices from aggregates
         interest_rate = np.float64(
@@ -154,7 +149,12 @@ if __name__ == "__main__":
         # Solve for policy functions
         ############################################################################
 
-        (policy_capital, policy_hc, policy_labor,) = solve_by_backward_induction(
+        (
+            policy_capital_working,
+            policy_hc_working,
+            policy_labor_working,
+            policy_capital_retired,
+        ) = solve_by_backward_induction_hc_iter(
             interest_rate=interest_rate,
             wage_rate=wage_rate,
             capital_grid=capital_grid,
@@ -166,9 +166,9 @@ if __name__ == "__main__":
             pension_benefit=pension_benefit,
             neg=neg,
             age_max=age_max,
+            age_retire=age_retire,
             income_tax_rate=income_tax_rate,
             beta=beta,
-            efficiency=efficiency,
             zeta=zeta,
             psi=psi,
             delta_hc=delta_hc,
@@ -181,17 +181,19 @@ if __name__ == "__main__":
         (
             aggregate_capital_out,
             aggregate_labor_out,
-            mass_distribution_full,
-            mass_distribution_capital,
-            mass_distribution_hc,
-        ) = aggregate(
-            policy_capital=policy_capital,
-            policy_hc=policy_hc,
-            policy_labor=policy_labor,
+            mass_distribution_full_working,
+            mass_distribution_capital_working,
+            mass_distribution_hc_working,
+            mass_distribution_full_retired,
+        ) = aggregate_hc(
+            policy_capital_working=policy_capital_working,
+            policy_hc_working=policy_hc_working,
+            policy_labor_working=policy_labor_working,
+            policy_capital_retired=policy_capital_retired,
             age_max=age_max,
+            age_retire=age_retire,
             n_gridpoints_capital=n_gridpoints_capital,
             hc_init=hc_init,
-            efficiency=efficiency,
             capital_grid=capital_grid,
             n_gridpoints_hc=n_gridpoints_hc,
             hc_grid=hc_grid,
@@ -252,52 +254,50 @@ if __name__ == "__main__":
     )
 
     # Check mass of agents at upper bound of asset grid
-    mass_upper_bound = np.sum(mass_distribution_capital[-1, :])
+    mass_upper_bound = np.sum(mass_distribution_capital_working[-1, :])
     print(f"mass of agents at upper bound of asset grid = {mass_upper_bound}")
 
     # Average hours worked
     h = np.zeros(age_max)
-    for age in range(age_max):
+    for age in range(duration_working):
         for assets_this_period_index in range(n_gridpoints_capital):
             for hc_this_period_index in range(n_gridpoints_hc):
                 h[age] += (
-                    policy_labor[assets_this_period_index, hc_this_period_index, age]
-                    * mass_distribution_full[
+                    policy_labor_working[
+                        assets_this_period_index, hc_this_period_index, age
+                    ]
+                    * mass_distribution_full_working[
                         assets_this_period_index, hc_this_period_index, age
                     ]
                 )
-        h[age] = h[age] / sum(sum(mass_distribution_full[:, :, age]))
+        h[age] = h[age] / sum(sum(mass_distribution_full_working[:, :, age]))
 
     # Gini disposable income
     income_pension = np.zeros(
         (n_gridpoints_capital, n_gridpoints_hc, age_max), dtype=np.float64
     )
-    income_pension_tmp = interest_rate * capital_grid + pension_benefit
-    income_pension[:, :, age_retire - 1 :] = np.tile(
-        income_pension_tmp, (n_gridpoints_hc, duration_retired)
-    ).reshape((n_gridpoints_capital, n_gridpoints_hc, duration_retired), order="F")
+    income_retired = interest_rate * capital_grid + pension_benefit
+    income_retired = np.tile(income_retired, (duration_retired)).reshape(
+        (n_gridpoints_capital, duration_retired), order="F"
+    )
 
-    income_labor = np.zeros((n_gridpoints_capital, n_gridpoints_hc, age_max))
-    for age in range(age_max):
+    income_working = np.zeros((n_gridpoints_capital, n_gridpoints_hc, duration_working))
+    for age in range(duration_working):
         for assets_this_period_index in range(n_gridpoints_capital):
             for hc_this_period_index in range(n_gridpoints_hc):
-                income_labor[assets_this_period_index, hc_this_period_index, age] = (
+                income_working[assets_this_period_index, hc_this_period_index, age] = (
                     interest_rate * capital_grid[assets_this_period_index]
                     + hc_grid[hc_this_period_index]
                     * efficiency[age]
-                    * policy_labor[assets_this_period_index, hc_this_period_index, age]
+                    * policy_labor_working[
+                        assets_this_period_index, hc_this_period_index, age
+                    ]
                 )
 
-    pop = np.squeeze(
-        mass_distribution_full.reshape(
-            (n_gridpoints_capital * n_gridpoints_hc * age_max, 1), order="F"
-        )
+    mass_distribution = reshape_as_vector(
+        mass_distribution_full_working, mass_distribution_full_retired
     )
-    income = np.squeeze(
-        (income_labor + income_pension).reshape(
-            (n_gridpoints_capital * n_gridpoints_hc * age_max, 1), order="F"
-        )
-    )
+    income = reshape_as_vector(income_working, income_retired)
 
-    gini_index, _, _ = gini(pop, income)
+    gini_index, _, _ = gini(mass_distribution, income)
     print(f"gini_index = {gini_index}")

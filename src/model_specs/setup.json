@@ -27,7 +27,7 @@
   "capital_max": 30.0,
   "n_gridpoints_capital": 10,
   "hc_min": 1.0,
-  "hc_max": 30.0,
+  "hc_max": 3.0,
   "n_gridpoints_hc": 5,
   "hc_init": 1.0,
   "delta_hc": 0.008,
@@ -40,5 +40,8 @@
   "prod_states": [
     3.0,
     0.5
-  ]
+  ],
+  "tolerance_capital": 0.0001,
+  "tolerance_labor": 0.0001,
+  "max_iterations_inner": 5
 }

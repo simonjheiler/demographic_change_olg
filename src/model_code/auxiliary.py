@@ -138,47 +138,22 @@ def gini(pop, val, make_plot=False):
     return gini_coefficient, lorentz_rel, lorentz_abs
 
 
-def reshape_as_vector(
-    in_working, in_retired, n_prod_states, age_max, age_retire, n_gridpoints_capital,
-):
+def reshape_as_vector(in_1, in_2):
     """ Cast input matrices in single vector for function "gini".
 
     Arguments
     ---------
-        in_working: np.array(n_productivity_states, duration_working, n_gridpoints_capital)
+        in_1: np.array(n_gridpoints_dim_1, n_gridpoints_dim_2, length_1)
             Input for working age agents
-        in_retired: np.array(duration_retired, n_gridpoints_capital)
+        in_2: np.array(n_gridpoints_dim_1, length_2)
             Input for retired agents
-        n_prod_states: np.int32
-            Number of idiosyncratic productivity states
-        age_max: np.int32
-            Maximum age of agents
-        age_retire: np.int32
-            Retirement age
-        n_gridpoints_capital: np.int32
-            Number of grid points of capital grid
     Returns
     -------
         out: np.array(np.prod(in_1.shape) + np.prod(in_2.shape))
             Combined input in vector shape
     """
-    out = np.zeros(
-        (
-            ((n_prod_states - 1) * age_retire + age_max - (n_prod_states - 1))
-            * n_gridpoints_capital,
-            1,
-        )
-    )
-    out[
-        : (n_prod_states * (age_retire - 1) * n_gridpoints_capital)
-    ] = in_working.reshape(
-        ((n_prod_states * (age_retire - 1) * n_gridpoints_capital), 1), order="F",
-    )
-    out[
-        (n_prod_states * (age_retire - 1) * n_gridpoints_capital) :
-    ] = in_retired.reshape(
-        ((age_max - age_retire + 1) * n_gridpoints_capital, 1), order="F"
-    )
-    out = np.squeeze(out)
+    out = np.zeros(np.prod(in_1.shape) + np.prod(in_2.shape))
+    out[: np.prod(in_1.shape)] = in_1.reshape((np.prod(in_1.shape)), order="F")
+    out[np.prod(in_1.shape) :] = in_2.reshape((np.prod(in_2.shape)), order="F")
 
     return out

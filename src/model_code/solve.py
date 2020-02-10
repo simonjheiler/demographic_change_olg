@@ -2,9 +2,16 @@ import numba as nb
 import numpy as np
 
 from src.model_code.within_period import get_consumption
+from src.model_code.within_period import get_consumption_hc
 from src.model_code.within_period import get_hc_effort
 from src.model_code.within_period import get_labor_input
+from src.model_code.within_period import get_labor_input_hc
 from src.model_code.within_period import util
+
+
+#########################################################################
+# STANDARD MODEL WITH IDIOSYNCRATIC RISK AND NO HUMAN CAPITAL
+#########################################################################
 
 
 @nb.njit
@@ -427,8 +434,13 @@ def aggregate_readable(
     )
 
 
-@nb.njit
-def solve_by_backward_induction_hc(
+#########################################################################
+# ADAPTED MODEL WITHOUT IDIOSYNCRATIC RISK AND WITH HUMAN CAPITAL
+#########################################################################
+
+
+# @nb.njit
+def solve_by_backward_induction_hc_iter(
     interest_rate,
     wage_rate,
     capital_grid,
@@ -440,9 +452,9 @@ def solve_by_backward_induction_hc(
     pension_benefit,
     neg,
     age_max,
+    age_retire,
     income_tax_rate,
     beta,
-    efficiency,
     zeta,
     psi,
     delta_hc,
@@ -473,40 +485,52 @@ def solve_by_backward_induction_hc(
             Very small number
         age_max: np.int32
             Maximum age of agents
+        age_retire: np.int32
+            Retirement age of agents
         income_tax_rate: np.float64
             Tax rate on labor income
         beta: np.float64
             Time discount factor
-        efficiency: np.array(age_retire, 1)
-            Age-dependent labor efficiency multiplier
         zeta: np.float64
-            ...
+            Scaling factor (average learning ability)
         psi: np.float64
-            ...
+            Curvature parameter of hc formation technology
         delta_hc: np.float64
-            ...
+            Depreciation rate on human capital
     Returns
     -------
-        policy_capital: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
-            Savings policy function (storing optimal asset choices by index on asset
-            grid as int)
-        policy_hc: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
+        policy_capital_working: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
+            Savings policy function for working age agents (storing optimal asset choices
+            by index on asset grid as int)
+        policy_hc_working: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
             Human capital policy function (storing optimal human capital choices by
             index on human capital grid as int)
-        policy_labor: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
+        policy_labor_working: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
             Labor supply policy function (storing optimal hours worked as np.float64)
+        policy_capital_retired: np.array(n_gridpoints_hc, duration_retired)
+            Savings policy function for retired agents (storing optimal asset choices
+            by index on asset grid as int)
     """
 
-    # Initialize objects for backward induction
-    value = np.zeros((n_gridpoints_capital, n_gridpoints_hc, age_max), dtype=np.float64)
-    policy_capital = np.zeros(
-        (n_gridpoints_capital, n_gridpoints_hc, age_max), dtype=np.int32
+    # Initialize objects for backward iteration
+    duration_retired = age_max - age_retire + 1  # length of retirement
+    duration_working = age_retire - 1  # length of working life
+
+    value_working = np.zeros(
+        (n_gridpoints_capital, n_gridpoints_hc, duration_working), dtype=np.float64
     )
-    policy_hc = np.zeros(
-        (n_gridpoints_capital, n_gridpoints_hc, age_max), dtype=np.int32
+    value_retired = np.zeros((n_gridpoints_capital, duration_retired), dtype=np.float64)
+    policy_capital_working = np.zeros(
+        (n_gridpoints_capital, n_gridpoints_hc, duration_working), dtype=np.int32
     )
-    policy_labor = np.zeros(
-        (n_gridpoints_capital, n_gridpoints_hc, age_max), dtype=np.float64,
+    policy_capital_retired = np.zeros(
+        (n_gridpoints_capital, duration_retired), dtype=np.int32
+    )
+    policy_hc_working = np.zeros(
+        (n_gridpoints_capital, n_gridpoints_hc, duration_working), dtype=np.int32
+    )
+    policy_labor_working = np.zeros(
+        (n_gridpoints_capital, n_gridpoints_hc, duration_working), dtype=np.float64,
     )
 
     ############################################################
@@ -515,15 +539,68 @@ def solve_by_backward_induction_hc(
 
     # Last period utility
     consumption_last = (1 + interest_rate) * capital_grid + pension_benefit
-    flow_utility_last = np.full((n_gridpoints_capital, n_gridpoints_hc), np.nan)
-    for col in range(n_gridpoints_hc):
-        flow_utility_last[:, col] = (consumption_last ** ((1 - sigma) * gamma)) / (
-            1 - sigma
-        )
-    value[:, :, age_max - 1] = flow_utility_last
+    flow_utility_last = (consumption_last ** ((1 - sigma) * gamma)) / (1 - sigma)
+    value_retired[:, -1] = flow_utility_last
 
+    # Retired agents
     # iterate backwards through T-1 to zero
-    for age in range(age_max - 2, -1, -1):
+    for age in range(duration_retired - 2, -1, -1):
+        for assets_this_period_idx in range(n_gridpoints_capital):
+
+            # Initialize right-hand side of Bellman equation
+            value_current_max = neg
+            assets_next_period_idx = -1
+
+            while assets_next_period_idx < n_gridpoints_capital - 1:  # assets tomorrow
+                assets_next_period_idx += 1
+                assets_this_period = capital_grid[assets_this_period_idx]
+                assets_next_period = capital_grid[assets_next_period_idx]
+
+                # Optimal labor supply
+                lab = 0.0
+
+                # Implied hc effort
+                hc_effort = 0.0
+
+                # Implied consumption
+                consumption = get_consumption_hc(
+                    assets_this_period=assets_this_period,
+                    assets_next_period=assets_next_period,
+                    pension_benefit=pension_benefit,
+                    labor_input=lab,
+                    interest_rate=interest_rate,
+                    wage_rate=wage_rate,
+                    income_tax_rate=income_tax_rate,
+                    hc_this_period=np.float64(0.0),
+                )
+
+                # Instantaneous utility
+                if consumption <= 0.0:
+                    flow_utility = neg
+                    assets_next_period_idx = n_gridpoints_capital - 1
+                else:
+                    flow_utility = util(
+                        consumption=consumption,
+                        labor_input=lab,
+                        hc_effort=hc_effort,
+                        gamma=gamma,
+                        sigma=sigma,
+                    )
+
+                value_current = (
+                    flow_utility + beta * value_retired[assets_next_period_idx, age + 1]
+                )
+
+                # Store indirect utility, optimal saving and labor
+                if value_current > value_current_max:
+                    value_retired[assets_this_period_idx, age] = value_current
+                    policy_capital_retired[
+                        assets_this_period_idx, age
+                    ] = assets_next_period_idx
+                    value_current_max = value_current
+
+    # working agents
+    for age in range(duration_working - 1, -1, -1):
         for assets_this_period_idx in range(n_gridpoints_capital):
             for hc_this_period_idx in range(n_gridpoints_hc):
                 for assets_next_period_idx in range(n_gridpoints_capital):
@@ -540,24 +617,27 @@ def solve_by_backward_induction_hc(
                         hc_next_period = hc_grid[hc_next_period_idx]
 
                         # Optimal labor supply
-                        lab = get_labor_input(
+                        lab = get_labor_input_hc(
                             assets_this_period=assets_this_period,
                             assets_next_period=assets_next_period,
                             interest_rate=interest_rate,
                             wage_rate=wage_rate,
                             income_tax_rate=income_tax_rate,
-                            productivity=hc_this_period,
-                            efficiency=np.float64(efficiency[age]),
+                            hc_this_period=hc_this_period,
                             gamma=gamma,
                         )
 
                         # Implied hc effort
                         hc_effort = get_hc_effort(
-                            hc_this_period, hc_next_period, zeta, psi, delta_hc
+                            hc_this_period=hc_this_period,
+                            hc_next_period=hc_next_period,
+                            zeta=zeta,
+                            psi=psi,
+                            delta_hc=delta_hc,
                         )
 
                         # Implied consumption
-                        consumption = get_consumption(
+                        consumption = get_consumption_hc(
                             assets_this_period=assets_this_period,
                             assets_next_period=assets_next_period,
                             pension_benefit=np.float64(0.0),
@@ -565,8 +645,7 @@ def solve_by_backward_induction_hc(
                             interest_rate=interest_rate,
                             wage_rate=wage_rate,
                             income_tax_rate=income_tax_rate,
-                            productivity=hc_this_period,
-                            efficiency=np.float64(efficiency[age]),
+                            hc_this_period=hc_this_period,
                         )
 
                         # Instantaneous utility
@@ -582,39 +661,54 @@ def solve_by_backward_induction_hc(
                                 sigma=sigma,
                             )
 
-                        value_current = (
-                            flow_utility
-                            + beta
-                            * value[assets_next_period_idx, hc_next_period_idx, age + 1]
-                        )
+                        # Right-hand side of Bellman equation
+                        if age == duration_working - 1:  # retired next period
+                            value_current = (
+                                flow_utility
+                                + beta * value_retired[assets_next_period_idx, 0]
+                            )
+                        else:
+                            value_current = (
+                                flow_utility
+                                + beta
+                                * value_working[
+                                    assets_next_period_idx, hc_next_period_idx, age + 1
+                                ]
+                            )
 
                         # Store indirect utility, optimal saving and labor
                         if value_current > value_current_max:
-                            value[
+                            value_working[
                                 assets_this_period_idx, hc_this_period_idx, age
                             ] = value_current
-                            policy_labor[
+                            policy_labor_working[
                                 assets_this_period_idx, hc_this_period_idx, age
                             ] = lab
-                            policy_capital[
+                            policy_capital_working[
                                 assets_this_period_idx, hc_this_period_idx, age
                             ] = assets_next_period_idx
-                            policy_hc[
+                            policy_hc_working[
                                 assets_this_period_idx, hc_this_period_idx, age
                             ] = hc_next_period_idx
                             value_current_max = value_current
 
-    return policy_capital, policy_hc, policy_labor
+    return (
+        policy_capital_working,
+        policy_hc_working,
+        policy_labor_working,
+        policy_capital_retired,
+    )
 
 
 def aggregate_hc(
-    policy_capital,
-    policy_hc,
-    policy_labor,
+    policy_capital_working,
+    policy_hc_working,
+    policy_labor_working,
+    policy_capital_retired,
     age_max,
+    age_retire,
     n_gridpoints_capital,
     hc_init,
-    efficiency,
     capital_grid,
     n_gridpoints_hc,
     hc_grid,
@@ -625,22 +719,25 @@ def aggregate_hc(
 
     Arguments
     ---------
-        policy_capital: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
-            Savings policy function (storing optimal asset choices by index on asset
-            grid as int)
-        policy_hc: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
+        policy_capital_working: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
+            Savings policy function for working age agents (storing optimal asset choices
+            by index on asset grid as int)
+        policy_hc_working: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
             Human capital policy function (storing optimal human capital choices by
             index on human capital grid as int)
-        policy_labor: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
+        policy_labor_working: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
             Labor supply policy function (storing optimal hours worked as np.float64)
+        policy_capital_retired: np.array(n_gridpoints_hc, duration_retired)
+            Savings policy function for retired agents (storing optimal asset choices
+            by index on asset grid as int)
         age_max: np.int32
             Maximum age of agents
+        age_retire: np.int32
+            Retirement age of agents
         n_gridpoints_capital: np.int32
             Number of grid points of capital grid
         hc_init: np.float64
             Initial level of human capital
-        efficiency: np.array(age_retire, 1)
-            Age-dependent labor efficiency multiplier
         capital_grid: np.array(n_gridpoints_capital)
             Asset grid
         n_gridpoints_hc: np.int32
@@ -667,6 +764,8 @@ def aggregate_hc(
             Distribution of agents by human capital level and age
     """
     # Initialize objects for forward iteration
+    duration_retired = age_max - age_retire + 1  # length of retirement
+    duration_working = age_retire - 1  # length of working life
 
     # Aggregate variables by age (i.e. for each generation)
     capital_distribution_age = np.zeros(age_max, dtype=np.float64)
@@ -674,70 +773,104 @@ def aggregate_hc(
     labor_distribution_age = np.zeros(age_max, dtype=np.float64)
 
     # Distributions of agents
-    mass_distribution_full = np.zeros(
-        (n_gridpoints_capital, n_gridpoints_hc, age_max), dtype=np.float64,
+    mass_distribution_full_working = np.zeros(
+        (n_gridpoints_capital, n_gridpoints_hc, duration_working), dtype=np.float64,
     )
-    mass_distribution_capital = np.zeros(
+    mass_distribution_capital_working = np.zeros(
         (n_gridpoints_capital, age_max), dtype=np.float64
     )
-    mass_distribution_hc = np.zeros((n_gridpoints_hc, age_max), dtype=np.float64)
+    mass_distribution_hc_working = np.zeros(
+        (n_gridpoints_hc, age_max), dtype=np.float64
+    )
+    mass_distribution_full_retired = np.zeros(
+        (n_gridpoints_capital, duration_retired), dtype=np.float64
+    )
 
     # make sure that all agents start with  correct initial level, i.e. hc = 1 and assets = 0
-    mass_distribution_full[0, 0, 0] = hc_init * mass[0]
-    mass_distribution_capital[0, 0] = mass[0]
-    mass_distribution_hc[0, 0] = mass[0]
+    mass_distribution_full_working[:, 0, 0] = hc_init * mass[0]
+    mass_distribution_capital_working[0, 0] = mass[0]
+    mass_distribution_hc_working[0, 0] = hc_init * mass[0]
 
     ############################################################################
     # Iterating over the distribution
     ############################################################################
     # Workers
-    for age in range(age_max - 1):  # iterations over cohorts
-        for assets_this_period_index in range(
-            n_gridpoints_capital
-        ):  # current asset holdings
-            for hc_this_period_index in range(
-                n_gridpoints_hc
-            ):  # current human capital level
+    for age in range(duration_working):
+        for assets_this_period_index in range(n_gridpoints_capital):
+            for hc_this_period_index in range(n_gridpoints_hc):
 
-                assets_next_period_index = policy_capital[
+                assets_next_period_index = policy_capital_working[
                     assets_this_period_index, hc_this_period_index, age
                 ]
-                hc_next_period_index = policy_hc[
+                hc_next_period_index = policy_hc_working[
                     assets_this_period_index, hc_this_period_index, age
                 ]
 
-                mass_distribution_full[
-                    assets_next_period_index, hc_next_period_index, age + 1
-                ] += mass_distribution_full[
-                    assets_this_period_index, hc_this_period_index, age
-                ] / (
-                    1 + population_growth_rate
-                )
+                if age < duration_working - 1:
+                    mass_distribution_full_working[
+                        assets_next_period_index, hc_next_period_index, age + 1
+                    ] += mass_distribution_full_working[
+                        assets_this_period_index, hc_this_period_index, age
+                    ] / (
+                        1 + population_growth_rate
+                    )
+                elif age == duration_working - 1:
+                    mass_distribution_full_retired[
+                        assets_next_period_index, 0
+                    ] += mass_distribution_full_working[
+                        assets_this_period_index, hc_this_period_index, age
+                    ] / (
+                        1 + population_growth_rate
+                    )
 
         for assets_this_period_index in range(n_gridpoints_capital):
             for hc_this_period_index in range(n_gridpoints_hc):
                 labor_distribution_age[age] += (
-                    policy_labor[assets_this_period_index, hc_this_period_index, age]
-                    * efficiency[age]
-                    * mass_distribution_full[
+                    policy_labor_working[
+                        assets_this_period_index, hc_this_period_index, age
+                    ]
+                    * hc_grid[hc_this_period_index]
+                    * mass_distribution_full_working[
                         assets_this_period_index, hc_this_period_index, age
                     ]
                 )
 
-        # Aggregate capital by age
+        # Aggregate assets by age
         for assets_this_period_index in range(n_gridpoints_capital):
-            mass_distribution_capital[assets_this_period_index, age + 1] = np.sum(
-                mass_distribution_full[assets_this_period_index, :, age + 1]
+            mass_distribution_capital_working[assets_this_period_index, age] = np.sum(
+                mass_distribution_full_working[assets_this_period_index, :, age]
             )
+        # Aggregate human capital by age
         for hc_this_period_index in range(n_gridpoints_hc):
-            mass_distribution_hc[hc_this_period_index, age + 1] = np.sum(
-                mass_distribution_full[:, hc_this_period_index, age + 1]
+            mass_distribution_hc_working[hc_this_period_index, age] = np.sum(
+                mass_distribution_full_working[:, hc_this_period_index, age]
             )
 
+        # Aggregate variables
         capital_distribution_age[age + 1] = np.dot(
-            capital_grid, mass_distribution_capital[:, age + 1]
+            capital_grid, mass_distribution_capital_working[:, age + 1]
         )
-        hc_distribution_age[age + 1] = np.dot(hc_grid, mass_distribution_hc[:, age + 1])
+        hc_distribution_age[age + 1] = np.dot(
+            hc_grid, mass_distribution_hc_working[:, age + 1]
+        )
+
+    # Retirees
+    for age in range(duration_retired - 2):
+        for assets_this_period_index in range(n_gridpoints_capital):
+
+            assets_next_period_index = policy_capital_retired[
+                assets_this_period_index, age
+            ]
+            mass_distribution_full_retired[
+                assets_next_period_index, age + 1
+            ] += mass_distribution_full_retired[assets_this_period_index, age] / (
+                1 + population_growth_rate
+            )
+
+        # Aggregate assets and human capital
+        capital_distribution_age[duration_working + age + 1] = np.dot(
+            capital_grid, mass_distribution_full_retired[:, age + 1]
+        )
 
     aggregate_capital_out = np.sum(capital_distribution_age)
     aggregate_labor_out = np.sum(labor_distribution_age)
@@ -745,7 +878,8 @@ def aggregate_hc(
     return (
         aggregate_capital_out,
         aggregate_labor_out,
-        mass_distribution_full,
-        mass_distribution_capital,
-        mass_distribution_hc,
+        mass_distribution_full_working,
+        mass_distribution_capital_working,
+        mass_distribution_hc_working,
+        mass_distribution_full_retired,
     )
