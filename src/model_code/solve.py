@@ -15,7 +15,7 @@ from src.model_code.within_period import util
 
 
 @nb.njit
-def solve_by_backward_induction_numba(
+def solve_by_backward_induction_baseline_readable(
     interest_rate,
     wage_rate,
     capital_grid,
@@ -472,7 +472,273 @@ def aggregate_baseline_readable(
 
 
 @nb.njit
-def solve_by_backward_induction_hc_iter(
+def solve_by_backward_induction_hc_readable(
+    interest_rate,
+    wage_rate,
+    capital_grid,
+    n_gridpoints_capital,
+    hc_grid,
+    n_gridpoints_hc,
+    sigma,
+    gamma,
+    pension_benefit,
+    neg,
+    age_max,
+    age_retire,
+    income_tax_rate,
+    beta,
+    zeta,
+    psi,
+    delta_hc,
+):
+    """ Calculate household policy functions.
+
+    Arguments
+    ---------
+        interest_rate: np.float64
+            Current interest rate on capital holdings
+        wage_rate: np.float64
+            Current wage rate on effective labor input
+        capital_grid: np.array(n_gridpoints_capital)
+            Asset grid
+        n_gridpoints_capital: np.int32
+            Number of grid points of capital grid
+        hc_grid: np.array(n_gridpoints_hc)
+            Human capital grid
+        n_gridpoints_hc: np.int32
+            Number of grid points of human capital grid
+        sigma: np.float64
+            Inverse of inter-temporal elasticity of substitution
+        gamma: np.float64
+            Weight of consumption utility vs. leisure utility
+        pension_benefit: np.float64
+            Income from pension benefits
+        neg: np.float64
+            Very small number
+        age_max: np.int32
+            Maximum age of agents
+        age_retire: np.int32
+            Retirement age of agents
+        income_tax_rate: np.float64
+            Tax rate on labor income
+        beta: np.float64
+            Time discount factor
+        zeta: np.float64
+            Scaling factor (average learning ability)
+        psi: np.float64
+            Curvature parameter of hc formation technology
+        delta_hc: np.float64
+            Depreciation rate on human capital
+    Returns
+    -------
+        policy_capital_working: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
+            Savings policy function for working age agents (storing optimal asset choices
+            by index on asset grid as int)
+        policy_hc_working: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
+            Human capital policy function (storing optimal human capital choices by
+            index on human capital grid as int)
+        policy_labor_working: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
+            Labor supply policy function (storing optimal hours worked as np.float64)
+        policy_capital_retired: np.array(n_gridpoints_hc, duration_retired)
+            Savings policy function for retired agents (storing optimal asset choices
+            by index on asset grid as int)
+    """
+
+    # Initialize objects for backward iteration
+    duration_retired = age_max - age_retire + 1  # length of retirement
+    duration_working = age_retire - 1  # length of working life
+
+    value_working = np.zeros(
+        (n_gridpoints_capital, n_gridpoints_hc, duration_working), dtype=np.float64
+    )
+    value_retired = np.zeros((n_gridpoints_capital, duration_retired), dtype=np.float64)
+    policy_capital_working = np.zeros(
+        (n_gridpoints_capital, n_gridpoints_hc, duration_working), dtype=np.int32
+    )
+    policy_capital_retired = np.zeros(
+        (n_gridpoints_capital, duration_retired), dtype=np.int32
+    )
+    policy_hc_working = np.zeros(
+        (n_gridpoints_capital, n_gridpoints_hc, duration_working), dtype=np.int32
+    )
+    policy_labor_working = np.zeros(
+        (n_gridpoints_capital, n_gridpoints_hc, duration_working), dtype=np.float64,
+    )
+
+    ############################################################
+    # BACKWARD INDUCTION
+    ############################################################
+
+    # Last period utility
+    consumption_last = (1 + interest_rate) * capital_grid + pension_benefit
+    flow_utility_last = (consumption_last ** ((1 - sigma) * gamma)) / (1 - sigma)
+    value_retired[:, -1] = flow_utility_last
+
+    # Retired agents
+    # iterate backwards through T-1 to zero
+    for age_idx in range(duration_retired - 2, -1, -1):
+        for assets_this_period_idx in range(n_gridpoints_capital):
+
+            # Initialize right-hand side of Bellman equation
+            value_current_max = neg
+            assets_next_period_idx = -1
+
+            while assets_next_period_idx < n_gridpoints_capital - 1:  # assets tomorrow
+                assets_next_period_idx += 1
+                assets_this_period = capital_grid[assets_this_period_idx]
+                assets_next_period = capital_grid[assets_next_period_idx]
+
+                # Optimal labor supply
+                lab = 0.0
+
+                # Implied hc effort
+                hc_effort = 0.0
+
+                # Implied consumption
+                consumption = get_consumption_hc(
+                    assets_this_period=assets_this_period,
+                    assets_next_period=assets_next_period,
+                    pension_benefit=pension_benefit,
+                    labor_input=lab,
+                    interest_rate=interest_rate,
+                    wage_rate=wage_rate,
+                    income_tax_rate=income_tax_rate,
+                    hc_this_period=np.float64(0.0),
+                )
+
+                # Instantaneous utility
+                if consumption <= 0.0:
+                    flow_utility = neg
+                    assets_next_period_idx = n_gridpoints_capital - 1
+                else:
+                    flow_utility = util(
+                        consumption=consumption,
+                        labor_input=lab,
+                        hc_effort=hc_effort,
+                        gamma=gamma,
+                        sigma=sigma,
+                    )
+
+                value_current = (
+                    flow_utility
+                    + beta * value_retired[assets_next_period_idx, age_idx + 1]
+                )
+
+                # Store indirect utility, optimal saving and labor
+                if value_current > value_current_max:
+                    value_retired[assets_this_period_idx, age_idx] = value_current
+                    policy_capital_retired[
+                        assets_this_period_idx, age_idx
+                    ] = assets_next_period_idx
+                    value_current_max = value_current
+
+    # working agents
+    for age_idx in range(duration_working - 1, -1, -1):
+        for assets_this_period_idx in range(n_gridpoints_capital):
+            for hc_this_period_idx in range(n_gridpoints_hc):
+
+                # Initialize right-hand side of Bellman equation
+                value_current_max = neg
+                assets_next_period_idx = -1
+
+                while assets_next_period_idx < n_gridpoints_capital - 1:
+                    assets_next_period_idx += 1
+                    assets_this_period = capital_grid[assets_this_period_idx]
+                    assets_next_period = capital_grid[assets_next_period_idx]
+
+                    hc_next_period_idx = -1
+                    while hc_next_period_idx < n_gridpoints_hc - 1:  # assets tomorrow
+                        hc_next_period_idx += 1
+                        hc_this_period = hc_grid[hc_this_period_idx]
+                        hc_next_period = hc_grid[hc_next_period_idx]
+
+                        # Optimal labor supply
+                        lab = get_labor_input_hc(
+                            assets_this_period=assets_this_period,
+                            assets_next_period=assets_next_period,
+                            interest_rate=interest_rate,
+                            wage_rate=wage_rate,
+                            income_tax_rate=income_tax_rate,
+                            hc_this_period=hc_this_period,
+                            gamma=gamma,
+                        )
+
+                        # Implied hc effort
+                        hc_effort = get_hc_effort(
+                            hc_this_period=hc_this_period,
+                            hc_next_period=hc_next_period,
+                            zeta=zeta,
+                            psi=psi,
+                            delta_hc=delta_hc,
+                        )
+
+                        # Implied consumption
+                        consumption = get_consumption_hc(
+                            assets_this_period=assets_this_period,
+                            assets_next_period=assets_next_period,
+                            pension_benefit=np.float64(0.0),
+                            labor_input=lab,
+                            interest_rate=interest_rate,
+                            wage_rate=wage_rate,
+                            income_tax_rate=income_tax_rate,
+                            hc_this_period=hc_this_period,
+                        )
+
+                        # Instantaneous utility
+                        if consumption <= 0.0:
+                            flow_utility = neg
+                            assets_next_period_idx = n_gridpoints_capital - 1
+                        else:
+                            flow_utility = util(
+                                consumption=consumption,
+                                labor_input=lab,
+                                hc_effort=np.float64(0.0),
+                                gamma=gamma,
+                                sigma=sigma,
+                            )
+
+                        # Right-hand side of Bellman equation
+                        if age_idx == duration_working - 1:  # retired next period
+                            value_current = (
+                                flow_utility
+                                + beta * value_retired[assets_next_period_idx, 0]
+                            )
+                        else:
+                            value_current = (
+                                flow_utility
+                                + beta
+                                * value_working[
+                                    assets_next_period_idx,
+                                    hc_next_period_idx,
+                                    age_idx + 1,
+                                ]
+                            )
+
+                        # Store indirect utility, optimal saving and labor
+                        if value_current > value_current_max:
+                            value_working[
+                                assets_this_period_idx, hc_this_period_idx, age_idx
+                            ] = value_current
+                            policy_labor_working[
+                                assets_this_period_idx, hc_this_period_idx, age_idx
+                            ] = lab
+                            policy_capital_working[
+                                assets_this_period_idx, hc_this_period_idx, age_idx
+                            ] = assets_next_period_idx
+                            policy_hc_working[
+                                assets_this_period_idx, hc_this_period_idx, age_idx
+                            ] = hc_next_period_idx
+                            value_current_max = value_current
+
+    return (
+        policy_capital_working,
+        policy_hc_working,
+        policy_labor_working,
+        policy_capital_retired,
+    )
+
+
+def solve_by_backward_induction_hc_vectorized(
     interest_rate,
     wage_rate,
     capital_grid,
