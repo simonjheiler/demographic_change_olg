@@ -157,3 +157,17 @@ def reshape_as_vector(in_1, in_2):
     out[np.prod(in_1.shape) :] = in_2.reshape((np.prod(in_2.shape)), order="F")
 
     return out
+
+
+def get_average_hours_worked(in_1, in_2):
+    hours = np.zeros(in_1.shape[:])
+    for age_idx in range(len(hours)):
+        for dim_1_idx in range(in_1.shape[0]):
+            for dim_2_idx in range(in_1.shape[1]):
+                hours[age_idx] += (
+                    in_1[dim_1_idx, dim_2_idx, age_idx]
+                    * in_2[dim_1_idx, dim_2_idx, age_idx]
+                )
+        hours[age_idx] = hours[age_idx] / sum(sum(in_2[:, :, age_idx]))
+
+    return hours
