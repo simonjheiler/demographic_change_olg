@@ -4,16 +4,17 @@ import numpy as np
 import pandas as pd
 
 from bld.project_paths import project_paths_join as ppj
-from src.model_code.solve import (
-    aggregate_baseline_readable as aggregate_baseline,
-)  # noqa:F401
 from src.model_code.solve import aggregate_hc_readable as aggregate_hc  # noqa:F401
 from src.model_code.solve import (
-    solve_by_backward_induction_hc_iter as solve_hc,
+    solve_by_backward_induction_hc_vectorized as solve_hc,
 )  # noqa:F401
-from src.model_code.solve import (
-    solve_by_backward_induction_numba as solve_baseline,
-)  # noqa:F401
+
+# from src.model_code.solve import (
+#     aggregate_baseline_readable as aggregate_baseline,
+# )  # noqa:F401
+# from src.model_code.solve import (
+#     solve_by_backward_induction_baseline_readable as solve_baseline,
+# )  # noqa:F401
 
 # from src.model_code.auxiliary import get_average_hours_worked
 # from src.model_code.auxiliary import gini
@@ -105,7 +106,7 @@ if __name__ == "__main__":
         aggregate_capital_in = np.float64(1.209551542349482)
         aggregate_labor_in = np.float64(0.160261889093575)
         prod_states = np.array([0.5, 0.5], dtype=np.float64)
-        gamma = np.float64(0.42)
+        gamma = np.float64(1.0)
     elif reform == 4:
         income_tax_rate = np.float64(0.11)
         aggregate_capital_in = np.float64(5.4755)
@@ -164,32 +165,10 @@ if __name__ == "__main__":
         ############################################################################
 
         (
-            policy_capital_working_baseline,
-            policy_labor_working_baseline,
-            policy_capital_retired_baseline,
-        ) = solve_baseline(
-            interest_rate=interest_rate,
-            wage_rate=wage_rate,
-            capital_grid=capital_grid,
-            n_gridpoints_capital=n_gridpoints_capital,
-            sigma=sigma,
-            gamma=gamma,
-            pension_benefit=pension_benefit,
-            neg=neg,
-            duration_retired=duration_retired,
-            duration_working=duration_working,
-            n_prod_states=n_prod_states,
-            income_tax_rate=income_tax_rate,
-            beta=beta,
-            prod_states=prod_states,
-            efficiency=efficiency,
-            transition_prod_states=transition_prod_states,
-        )
-        (
-            policy_capital_working_hc,
-            policy_hc_working_hc,
-            policy_labor_working_hc,
-            policy_capital_retired_hc,
+            policy_capital_working,
+            policy_hc_working,
+            policy_labor_working,
+            policy_capital_retired,
         ) = solve_hc(
             interest_rate=interest_rate,
             wage_rate=wage_rate,
@@ -215,40 +194,17 @@ if __name__ == "__main__":
         ############################################################################
 
         (
-            aggregate_capital_out_baseline,
-            aggregate_labor_out_baseline,
-            mass_distribution_full_working_baseline,
-            mass_distribution_capital_working_baseline,
-            mass_distribution_full_retired_baseline,
-        ) = aggregate_baseline(
-            policy_capital_working=policy_capital_working_baseline,
-            policy_capital_retired=policy_capital_retired_baseline,
-            policy_labor_working=policy_labor_working_baseline,
-            age_max=age_max,
-            n_prod_states=n_prod_states,
-            n_gridpoints_capital=n_gridpoints_capital,
-            duration_working=duration_working,
-            productivity_init=productivity_init,
-            transition_prod_states=transition_prod_states,
-            efficiency=efficiency,
-            capital_grid=capital_grid,
-            mass=mass,
-            duration_retired=duration_retired,
-            population_growth_rate=population_growth_rate,
-            prod_states=prod_states,
-        )
-        (
-            aggregate_capital_out_hc,
-            aggregate_labor_out_hc,
-            mass_distribution_full_working_hc,
-            mass_distribution_capital_working_hc,
-            mass_distribution_hc_working_hc,
-            mass_distribution_full_retired_hc,
+            aggregate_capital_out,
+            aggregate_labor_out,
+            mass_distribution_full_working,
+            mass_distribution_capital_working,
+            mass_distribution_working,
+            mass_distribution_full_retired,
         ) = aggregate_hc(
-            policy_capital_working=policy_capital_working_hc,
-            policy_hc_working=policy_hc_working_hc,
-            policy_labor_working=policy_labor_working_hc,
-            policy_capital_retired=policy_capital_retired_hc,
+            policy_capital_working=policy_capital_working,
+            policy_hc_working=policy_hc_working,
+            policy_labor_working=policy_labor_working,
+            policy_capital_retired=policy_capital_retired,
             age_max=age_max,
             age_retire=age_retire,
             n_gridpoints_capital=n_gridpoints_capital,

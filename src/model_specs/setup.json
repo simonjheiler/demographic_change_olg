@@ -27,8 +27,8 @@
   "capital_max": 30.0,
   "n_gridpoints_capital": 100,
   "hc_min": 0.5,
-  "hc_max": 0.5,
-  "n_gridpoints_hc": 1,
+  "hc_max": 3.0,
+  "n_gridpoints_hc": 2,
   "hc_init": 0.5,
   "delta_hc": 0.008,
   "psi": 0.65,
@@ -36,7 +36,7 @@
   "income_tax_rate": 0.11,
   "aggregate_capital_init": 1.209551542349482,
   "aggregate_labor_init": 0.160261889093575,
-  "gamma": 0.42,
+  "gamma": 1.0,
   "prod_states": [
     1.0,
     1.0
