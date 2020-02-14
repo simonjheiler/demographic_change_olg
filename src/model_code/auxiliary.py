@@ -159,15 +159,89 @@ def reshape_as_vector(in_1, in_2):
     return out
 
 
-def get_average_hours_worked(in_1, in_2):
-    hours = np.zeros(in_1.shape[:])
-    for age_idx in range(len(hours)):
-        for dim_1_idx in range(in_1.shape[0]):
-            for dim_2_idx in range(in_1.shape[1]):
-                hours[age_idx] += (
-                    in_1[dim_1_idx, dim_2_idx, age_idx]
-                    * in_2[dim_1_idx, dim_2_idx, age_idx]
-                )
-        hours[age_idx] = hours[age_idx] / sum(sum(in_2[:, :, age_idx]))
+def get_average_hours_worked(policy, mass_distribution):
+    """ Compute average hours worked from labor input policy and mass distribution of
+        working age households.
 
-    return hours
+        ...
+
+    Arguments
+    ---------
+        policy: np.array(n_gridpoints_dim_1, n_gridpoints_dim_2, length_1)
+            Labor input policy function
+        mass_distribution: np.array(n_gridpoints_dim_1, n_gridpoints_dim_2, length_1)
+            Mass distribution of working age households
+    Returns
+    -------
+        out: np.array(length)
+            Average hours worked by age
+    """
+    hours = np.multiply(policy, mass_distribution)
+    hours_by_age = np.sum(np.sum(hours, axis=1), axis=0)
+    hours_average = hours_by_age / np.sum(np.sum(mass_distribution, axis=1), axis=0)
+
+    return hours_average
+
+
+def get_income(
+    interest_rate,
+    capital_grid,
+    pension_benefit,
+    duration_retired,
+    n_gridpoints_capital,
+    duration_working,
+    n_gridpoints_hc,
+    hc_grid,
+    efficiency,
+    policy_labor_working,
+):
+    """ Compute household income during working age and during retirement.
+
+        ...
+
+    Arguments
+    ---------
+        interest_rate: ---
+            ...
+        capital_grid: ---
+            ...
+        pension_benefit: ---
+            ...
+        duration_retired: ---
+            ...
+        n_gridpoints_capital: ---
+            ...
+        duration_working: ---
+            ...
+        n_gridpoints_hc: ---
+            ...
+        hc_grid: ---
+            ...
+        efficiency: ---
+            ...
+        policy_labor_working: ---
+            ...
+    Returns
+    -------
+        income_retired: np.array(n_gridpoints_capital, duration_retired)
+            Total household income during retirement by current asset level and age
+        income_working: np.array(n_gridpoints_capital, n_gridpoints_hc, duration_working)
+            Total household income during working age by current assets, current human capital
+            level and age
+    """
+    # Repeat retirement income for all ages in retirement period
+    income_retired = interest_rate * capital_grid + pension_benefit
+    income_retired = np.repeat(income_retired[:, np.newaxis], duration_retired, axis=1)
+
+    # Calculate working age income from states and labor input policy
+    assets_this_period, hc_this_period = np.meshgrid(capital_grid, hc_grid)
+    income_working = np.zeros((n_gridpoints_capital, n_gridpoints_hc, duration_working))
+
+    for age_idx in range(duration_working):
+        labor_input = policy_labor_working[:, :, age_idx].T
+        income_working[:, :, age_idx] = (
+            interest_rate * assets_this_period
+            + hc_this_period * efficiency[age_idx] * labor_input
+        ).T
+
+    return income_retired, income_working

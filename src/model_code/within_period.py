@@ -7,7 +7,7 @@ import numba as nb
 
 
 @nb.njit
-def get_labor_input(
+def get_labor_input_baseline(
     assets_this_period,
     assets_next_period,
     interest_rate,
@@ -92,7 +92,7 @@ def get_consumption(
         income_tax_rate: np.float64
             Tax rate on labor income
         productivity: np.float64
-            Current idiosyncratic productivity state
+            Current idiosyncratic productivity state or level of human capital
         efficiency: np.float64
             Age-dependent labor efficiency multiplier
     Returns
@@ -141,102 +141,6 @@ def util(consumption, labor_input, hc_effort, gamma, sigma):
 #########################################################################
 # ADAPTED MODEL WITHOUT IDIOSYNCRATIC RISK AND WITH HUMAN CAPITAL
 #########################################################################
-
-
-@nb.njit
-def get_labor_input_hc(
-    assets_this_period,
-    assets_next_period,
-    interest_rate,
-    wage_rate,
-    income_tax_rate,
-    hc_this_period,
-    gamma,
-):
-    """ Calculate optimal household labor input.
-
-    Arguments
-    ---------
-        assets_this_period: np.float64
-            Current asset holdings (pre interest payment)
-        assets_next_period: np.float64
-            Savings for asset holdings next period (pre interest payment)
-        interest_rate: np.float64
-            Current interest rate on capital holdings
-        wage_rate: np.float64
-            Current wage rate on effective labor input
-        income_tax_rate: np.float64
-            Tax rate on labor income
-        hc_this_period: np.float64
-            Current household productivity level (shock)
-        gamma: np.float64
-            Weight of consumption utility vs. leisure utility
-    Returns
-    -------
-        labor_input: np.float64
-            Optimal hours worked
-    """
-    if hc_this_period == 0.0:
-        labor_input = 0.0
-    else:
-        labor_input = (
-            gamma * (1.0 - income_tax_rate) * hc_this_period * wage_rate
-            - (1.0 - gamma)
-            * ((1.0 + interest_rate) * assets_this_period - assets_next_period)
-        ) / ((1.0 - income_tax_rate) * hc_this_period * wage_rate)
-
-    if labor_input > 1.0:
-        labor_input = 1.0
-    elif labor_input < 0.0:
-        labor_input = 0.0
-
-    return labor_input
-
-
-@nb.njit
-def get_consumption_hc(
-    assets_this_period,
-    assets_next_period,
-    pension_benefit,
-    labor_input,
-    interest_rate,
-    wage_rate,
-    income_tax_rate,
-    hc_this_period,
-):
-    """ Calculate consumption level via household budget constraint.
-
-    Arguments
-    ---------
-        assets_this_period: np.float64
-            Current asset holdings (pre interest payment)
-        assets_next_period: np.float64
-            Savings for asset holdings next period (pre interest payment)
-        pension_benefit: np.float64
-            Income from pension benefits
-        labor_input: np.float64
-            Hours worked
-        interest_rate: np.float64
-            Current interest rate on capital holdings
-        wage_rate: np.float64
-            Current wage rate on effective labor input
-        income_tax_rate: np.float64
-            Tax rate on labor income
-        hc_this_period: np.float64
-            Current level of human capital
-    Returns
-    -------
-        consumption: np.float64
-            Household consumption in the current period
-    """
-    consumption = (
-        (1 + interest_rate) * assets_this_period
-        + (1 - income_tax_rate) * wage_rate * hc_this_period * labor_input
-        + pension_benefit
-        - assets_next_period
-    )
-
-    return consumption
 
 
 @nb.njit

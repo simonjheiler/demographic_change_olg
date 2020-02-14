@@ -4,21 +4,12 @@ import numpy as np
 import pandas as pd
 
 from bld.project_paths import project_paths_join as ppj
-from src.model_code.solve import aggregate_hc_readable as aggregate_hc  # noqa:F401
-from src.model_code.solve import (
-    solve_by_backward_induction_hc_vectorized as solve_hc,
-)  # noqa:F401
-
-# from src.model_code.solve import (
-#     aggregate_baseline_readable as aggregate_baseline,
-# )  # noqa:F401
-# from src.model_code.solve import (
-#     solve_by_backward_induction_baseline_readable as solve_baseline,
-# )  # noqa:F401
-
-# from src.model_code.auxiliary import get_average_hours_worked
-# from src.model_code.auxiliary import gini
-# from src.model_code.auxiliary import reshape_as_vector  # noqa:F401
+from src.model_code.aggregate import aggregate_hc_readable as aggregate_hc
+from src.model_code.auxiliary import get_average_hours_worked
+from src.model_code.auxiliary import get_income
+from src.model_code.auxiliary import gini
+from src.model_code.auxiliary import reshape_as_vector
+from src.model_code.solve import solve_by_backward_induction_hc_vectorized as solve_hc
 
 #####################################################
 # SCRIPT
@@ -198,8 +189,6 @@ if __name__ == "__main__":
             aggregate_capital_out,
             aggregate_labor_out,
             mass_distribution_full_working,
-            mass_distribution_capital_working,
-            mass_distribution_working,
             mass_distribution_full_retired,
         ) = aggregate_hc(
             policy_capital_working=policy_capital_working,
@@ -215,7 +204,6 @@ if __name__ == "__main__":
             hc_grid=hc_grid,
             mass=mass,
             population_growth_rate=population_growth_rate,
-            efficiency=efficiency,
         )
 
         # Update the guess on capital and labor
@@ -270,39 +258,34 @@ if __name__ == "__main__":
         ]
     )
 
-    # # Check mass of agents at upper bound of asset grid
-    # mass_upper_bound = np.sum(mass_distribution_capital_working[-1, :])
-    # print(f"mass of agents at upper bound of asset grid = {mass_upper_bound}")
-    #
-    # # Average hours worked
-    # hours = get_average_hours_worked(policy_labor_working, mass_distribution_full_working)
-    #
-    # # Gini disposable income
-    # income_pension = np.zeros(
-    #     (n_gridpoints_capital, n_gridpoints_hc, age_max), dtype=np.float64
-    # )
-    # income_retired = interest_rate * capital_grid + pension_benefit
-    # income_retired = np.tile(income_retired, duration_retired).reshape(
-    #     (n_gridpoints_capital, duration_retired), order="F"
-    # )
-    #
-    # income_working = np.zeros((n_gridpoints_capital, n_gridpoints_hc, duration_working))
-    # for age in range(duration_working):
-    #     for assets_this_period_index in range(n_gridpoints_capital):
-    #         for hc_this_period_index in range(n_gridpoints_hc):
-    #             income_working[assets_this_period_index, hc_this_period_index, age] = (
-    #                 interest_rate * capital_grid[assets_this_period_index]
-    #                 + hc_grid[hc_this_period_index]
-    #                 * efficiency[age]
-    #                 * policy_labor_working[
-    #                     assets_this_period_index, hc_this_period_index, age
-    #                 ]
-    #             )
-    #
-    # mass_distribution = reshape_as_vector(
-    #     mass_distribution_full_working, mass_distribution_full_retired
-    # )
-    # income = reshape_as_vector(income_working, income_retired)
-    #
-    # gini_index, _, _ = gini(mass_distribution, income)
-    # print(f"gini_index = {gini_index}")
+    # Check mass of agents at upper bound of asset grid
+    mass_upper_bound = np.sum(np.sum(mass_distribution_full_working, axis=1)[-1, :])
+    print(f"mass of agents at upper bound of asset grid = {mass_upper_bound}")
+
+    # Average hours worked
+    hours = get_average_hours_worked(
+        policy_labor_working, mass_distribution_full_working
+    )
+
+    # Calculate Gini coefficient for disposable income
+    # Calculate disposable income
+    income_working, income_retired = get_income(
+        interest_rate,
+        capital_grid,
+        pension_benefit,
+        duration_retired,
+        n_gridpoints_capital,
+        duration_working,
+        n_gridpoints_hc,
+        hc_grid,
+        efficiency,
+        policy_labor_working,
+    )
+    # Reshape mass distribution and income arrays
+    mass_distribution = reshape_as_vector(
+        mass_distribution_full_working, mass_distribution_full_retired
+    )
+    income = reshape_as_vector(income_working, income_retired)
+    # Calculate Gini coefficient
+    gini_index, _, _ = gini(mass_distribution, income)
+    print(f"gini_index = {gini_index}")
