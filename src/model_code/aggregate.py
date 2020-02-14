@@ -243,6 +243,7 @@ def aggregate_hc_readable(
     hc_grid,
     mass,
     population_growth_rate,
+    survival_rates,
 ):
     """ Calculate aggregate variables and cross-sectional distribution from HH policy functions.
 
@@ -277,6 +278,8 @@ def aggregate_hc_readable(
             Vector of relative shares of agents by age
         population_growth_rate: np.float64
             Annual population growth rate
+        survival_rates: np.array(age_max)
+            Vector of conditional year-to-year survival rates
     Returns
     -------
         aggregate_capital_out: np.float64
@@ -330,18 +333,20 @@ def aggregate_hc_readable(
                 if age_idx < duration_working - 1:
                     mass_distribution_full_working[
                         assets_next_period_idx, hc_next_period_idx, age_idx + 1
-                    ] += mass_distribution_full_working[
-                        assets_this_period_idx, hc_this_period_idx, age_idx
-                    ] / (
-                        1 + population_growth_rate
+                    ] += (
+                        mass_distribution_full_working[
+                            assets_this_period_idx, hc_this_period_idx, age_idx
+                        ]
+                        / (1 + population_growth_rate)
+                        * survival_rates[age_idx]
                     )
                 elif age_idx == duration_working - 1:
-                    mass_distribution_full_retired[
-                        assets_next_period_idx, 0
-                    ] += mass_distribution_full_working[
-                        assets_this_period_idx, hc_this_period_idx, age_idx
-                    ] / (
-                        1 + population_growth_rate
+                    mass_distribution_full_retired[assets_next_period_idx, 0] += (
+                        mass_distribution_full_working[
+                            assets_this_period_idx, hc_this_period_idx, age_idx
+                        ]
+                        / (1 + population_growth_rate)
+                        * survival_rates[age_idx]
                     )
 
         for assets_this_period_idx in range(n_gridpoints_capital):
@@ -371,10 +376,10 @@ def aggregate_hc_readable(
             assets_next_period_idx = policy_capital_retired[
                 assets_this_period_idx, age_idx
             ]
-            mass_distribution_full_retired[
-                assets_next_period_idx, age_idx + 1
-            ] += mass_distribution_full_retired[assets_this_period_idx, age_idx] / (
-                1 + population_growth_rate
+            mass_distribution_full_retired[assets_next_period_idx, age_idx + 1] += (
+                mass_distribution_full_retired[assets_this_period_idx, age_idx]
+                / (1 + population_growth_rate)
+                * survival_rates[age_idx]
             )
 
         # Aggregate assets and human capital
@@ -407,6 +412,7 @@ def aggregate_hc_vectorized(
     hc_grid,
     mass,
     population_growth_rate,
+    survival_rates,
 ):
     """ Calculate aggregate variables and cross-sectional distribution from HH policy functions.
 
@@ -441,6 +447,8 @@ def aggregate_hc_vectorized(
             Vector of relative shares of agents by age
         population_growth_rate: np.float64
             Annual population growth rate
+        survival_rates: np.array(age_max)
+            Vector of conditional year-to-year survival rates
     Returns
     -------
         aggregate_capital_out: np.float64
@@ -503,13 +511,17 @@ def aggregate_hc_vectorized(
                 )
 
         if age_idx < duration_working - 1:
-            mass_distribution_full_working[
-                :, :, age_idx + 1
-            ] = mass_distribution_full_next_period / (1 + population_growth_rate)
+            mass_distribution_full_working[:, :, age_idx + 1] = (
+                mass_distribution_full_next_period
+                / (1 + population_growth_rate)
+                * survival_rates[age_idx]
+            )
         elif age_idx == duration_working - 1:
-            mass_distribution_full_retired[:, 0] = np.sum(
-                mass_distribution_full_next_period, axis=1
-            ) / (1 + population_growth_rate)
+            mass_distribution_full_retired[:, 0] = (
+                np.sum(mass_distribution_full_next_period, axis=1)
+                / (1 + population_growth_rate)
+                * survival_rates[age_idx]
+            )
 
         for assets_this_period_idx in range(n_gridpoints_capital):
             for hc_this_period_idx in range(n_gridpoints_hc):
@@ -538,10 +550,10 @@ def aggregate_hc_vectorized(
             assets_next_period_idx = policy_capital_retired[
                 assets_this_period_idx, age_idx
             ]
-            mass_distribution_full_retired[
-                assets_next_period_idx, age_idx + 1
-            ] += mass_distribution_full_retired[assets_this_period_idx, age_idx] / (
-                1 + population_growth_rate
+            mass_distribution_full_retired[assets_next_period_idx, age_idx + 1] += (
+                mass_distribution_full_retired[assets_this_period_idx, age_idx]
+                / (1 + population_growth_rate)
+                * survival_rates[age_idx]
             )
 
         # Aggregate assets and human capital

@@ -13,11 +13,11 @@ from bld.project_paths import project_paths_join as ppj
 # PARAMETERS
 ######################################################
 
-with open(ppj("IN_MODEL_SPECS", "stationary_initial.json")) as json_file:
+with open(ppj("IN_MODEL_SPECS", "setup.json")) as json_file:
     params = json.load(json_file)
 
-population_growth_rate = params["population_growth_rate"]
-transition_duration = params["transition_duration"]
+population_growth_rate = np.float64(params["population_growth_rate"])
+transition_duration = np.int32(params["transition_duration"])
 
 
 #####################################################
@@ -27,20 +27,26 @@ transition_duration = params["transition_duration"]
 
 def extrapolate_survival():
 
-    survival_rates = np.array(pd.read_csv(ppj("IN_DATA", "sr.csv")).values, dtype=float)
+    survival_rates = np.squeeze(
+        np.array(pd.read_csv(ppj("IN_DATA", "survival_rates.csv")).values, dtype=float)
+    )
+    survival_rates = np.repeat(
+        survival_rates[:, np.newaxis], transition_duration, axis=1
+    )
 
     return survival_rates
 
 
 def extrapolate_fertility():
 
-    fertility_rates = np.full(population_growth_rate, transition_duration)
+    fertility_rates = np.full((transition_duration), population_growth_rate)
 
     return fertility_rates
 
 
-def save_data(sample):
-    sample.tofile(ppj("OUT_DATA", f"{sample}.csv"), sep=",")
+def save_data(sample_1, sample_2):
+    np.savetxt(ppj("OUT_DATA", f"survival_rates.csv"), sample_1, delimiter=",")
+    np.savetxt(ppj("OUT_DATA", f"fertility_rates.csv"), sample_2, delimiter=",")
 
 
 #####################################################
@@ -48,7 +54,8 @@ def save_data(sample):
 ######################################################
 
 if __name__ == "__main__":
+
     survival_rates = extrapolate_survival()
     fertility_rates = extrapolate_fertility()
-    save_data(survival_rates)
-    save_data(fertility_rates)
+
+    save_data(survival_rates, fertility_rates)

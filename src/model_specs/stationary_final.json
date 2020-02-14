@@ -1,4 +1,5 @@
 {
+  "setup_name": "final",
   "beta": 0.97,
   "sigma": 2.0,
   "alpha": 0.36,
@@ -33,7 +34,7 @@
   "delta_hc": 0.008,
   "psi": 0.65,
   "zeta": 0.16,
-  "income_tax_rate": 0.11,
+  "income_tax_rate": 0.0,
   "aggregate_capital_init": 1.209551542349482,
   "aggregate_labor_init": 0.160261889093575,
   "gamma": 1.0,

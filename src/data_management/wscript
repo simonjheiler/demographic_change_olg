@@ -2,11 +2,13 @@
 
 
 def build(ctx):
-    pass
-    # # Illustrate simple use of run_py_script
-    # ctx(
-    #     features="run_py_script",
-    #     source="get_simulation_draws.py",
-    #     target=ctx.path_to(ctx, "OUT_DATA", "initial_locations.csv"),
-    #     name="get_simulation_draws",
-    # )
+
+    ctx(
+        features="run_py_script",
+        source="simulate_demographics.py",
+        target=[
+            ctx.path_to(ctx, "OUT_DATA", "fertility_rates.csv"),
+            ctx.path_to(ctx, "OUT_DATA", "survival_rates.csv"),
+        ],
+        name="simulate_demographics",
+    )

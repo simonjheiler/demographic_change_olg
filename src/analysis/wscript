@@ -3,18 +3,23 @@
 
 def build(ctx):
 
-    ctx(
-        features="run_py_script",
-        source="stationary.py",
-        deps=[
-            ctx.path_to(ctx, "IN_DATA", "ef.csv"),
-            ctx.path_to(ctx, "IN_MODEL_CODE", "solve.py"),
-            ctx.path_to(ctx, "IN_MODEL_CODE", "aggregate.py"),
-            ctx.path_to(ctx, "IN_MODEL_SPECS", "stationary_initial.json"),
-        ],
-        target=[
-            ctx.path_to(ctx, "OUT_ANALYSIS", "stationary.pickle"),
-            ctx.path_to(ctx, "OUT_ANALYSIS", "log", "stationary.log"),
-        ],
-        name="stationary",
-    )
+    for model in "initial", "final":
+
+        ctx(
+            features="run_py_script",
+            source="stationary.py",
+            deps=[
+                ctx.path_to(ctx, "IN_DATA", "efficiency_multiplier.csv"),
+                ctx.path_to(ctx, "OUT_DATA", "fertility_rates.csv"),
+                ctx.path_to(ctx, "OUT_DATA", "survival_rates.csv"),
+                ctx.path_to(ctx, "IN_MODEL_CODE", "solve.py"),
+                ctx.path_to(ctx, "IN_MODEL_CODE", "aggregate.py"),
+                ctx.path_to(ctx, "IN_MODEL_SPECS", f"stationary_{model}.json"),
+            ],
+            target=[
+                ctx.path_to(ctx, "OUT_ANALYSIS", f"stationary_{model}.pickle"),
+                ctx.path_to(ctx, "OUT_ANALYSIS", "log", f"stationary_{model}.log"),
+            ],
+            append=model,
+            name=f"stationary_{model}",
+        )

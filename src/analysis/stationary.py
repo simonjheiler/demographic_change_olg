@@ -19,29 +19,12 @@ from src.model_code.solve import solve_by_backward_induction_hc_vectorized as so
 ######################################################
 
 
-def solve_stationary(setup):
+def solve_stationary(model_specs):
 
-    # Load parameters
-    efficiency = np.squeeze(
-        np.array(
-            pd.read_csv(ppj("IN_DATA", "efficiency_multiplier.csv")).values,
-            dtype=np.float64,
-        )
-    )
+    # Load model specifications
+    params = model_specs
 
-    fertility_rates = np.array(
-        pd.read_csv(ppj("OUT_DATA", "fertility_rates.csv")).values, dtype=np.float64
-    )
-    survival_rates = np.array(
-        pd.read_csv(ppj("OUT_DATA", "survival_rates.csv")).values, dtype=np.float64
-    )
-
-    population_growth_rate = fertility_rates[0]
-    survival_rates = survival_rates[0, :]
-
-    with open(ppj("IN_MODEL_SPECS", f"stationary_{setup}.json")) as json_file:
-        params = json.load(json_file)
-
+    setup_name = params["setup_name"]
     alpha = np.float64(params["alpha"])
     beta = np.float64(params["beta"])
     sigma = np.float64(params["sigma"])
@@ -65,6 +48,28 @@ def solve_stationary(setup):
     tolerance_capital = np.float64(params["tolerance_capital"])
     tolerance_labor = np.float64(params["tolerance_labor"])
     max_iterations_inner = np.int32(params["max_iterations_inner"])
+
+    # Load demographic parameters
+    efficiency = np.squeeze(
+        np.array(
+            pd.read_csv(ppj("IN_DATA", "efficiency_multiplier.csv")).values,
+            dtype=np.float64,
+        )
+    )
+
+    fertility_rates = np.array(
+        pd.read_csv(ppj("OUT_DATA", "fertility_rates.csv")).values, dtype=np.float64
+    )
+    survival_rates = np.array(
+        pd.read_csv(ppj("OUT_DATA", "survival_rates.csv")).values, dtype=np.float64
+    )
+
+    if setup_name == "initial":
+        population_growth_rate = fertility_rates[0]
+        survival_rates = survival_rates[:, -1]
+    elif setup_name == "final":
+        population_growth_rate = fertility_rates[-1]
+        survival_rates = survival_rates[:, -1]
 
     # calculate derived parameters
     capital_grid = np.linspace(
@@ -285,10 +290,10 @@ def solve_stationary(setup):
 
 if __name__ == "__main__":
     model_name = sys.argv[1]
-    model = json.load(
-        open(ppj("IN_MODEL_SPECS", model_name + ".json"), encoding="utf-8")
+    model_specs = json.load(
+        open(ppj("IN_MODEL_SPECS", f"stationary_{model_name}.json"), encoding="utf-8")
     )
-    results = solve_stationary(model_name)
+    results = solve_stationary(model_specs)
 
     with open(ppj("OUT_ANALYSIS", f"stationary_{model_name}.pickle"), "wb") as out_file:
         pickle.dump(results, out_file)
