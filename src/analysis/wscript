@@ -2,22 +2,19 @@
 
 
 def build(ctx):
-    pass
-    # for model in "baseline", "max_moves_2":
-    #
-    #     # Illustrate use of run_py_script with automatic model specification.
-    #     ctx(
-    #         features="run_py_script",
-    #         source="schelling.py",
-    #         deps=[
-    #             ctx.path_to(ctx, "OUT_DATA", "initial_locations.csv"),
-    #             ctx.path_to(ctx, "IN_MODEL_CODE", "agent.py"),
-    #             ctx.path_to(ctx, "IN_MODEL_SPECS", f"{model}.json"),
-    #         ],
-    #         target=[
-    #             ctx.path_to(ctx, "OUT_ANALYSIS", f"schelling_{model}.pickle"),
-    #             ctx.path_to(ctx, "OUT_ANALYSIS", "log", f"schelling_{model}.log"),
-    #         ],
-    #         append=model,
-    #         name=f"schelling_{model}",
-    #     )
+
+    ctx(
+        features="run_py_script",
+        source="stationary.py",
+        deps=[
+            ctx.path_to(ctx, "IN_DATA", "ef.csv"),
+            ctx.path_to(ctx, "IN_MODEL_CODE", "solve.py"),
+            ctx.path_to(ctx, "IN_MODEL_CODE", "aggregate.py"),
+            ctx.path_to(ctx, "IN_MODEL_SPECS", "stationary_initial.json"),
+        ],
+        target=[
+            ctx.path_to(ctx, "OUT_ANALYSIS", "stationary.pickle"),
+            ctx.path_to(ctx, "OUT_ANALYSIS", "log", "stationary.log"),
+        ],
+        name="stationary",
+    )

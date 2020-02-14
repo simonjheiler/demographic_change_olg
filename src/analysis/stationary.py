@@ -1,4 +1,6 @@
 import json
+import pickle
+import sys
 
 import numpy as np
 import pandas as pd
@@ -11,38 +13,44 @@ from src.model_code.auxiliary import gini
 from src.model_code.auxiliary import reshape_as_vector
 from src.model_code.solve import solve_by_backward_induction_hc_vectorized as solve_hc
 
+
 #####################################################
-# SCRIPT
+# FUNCTIONS
 ######################################################
 
-if __name__ == "__main__":
+
+def solve_stationary(setup):
 
     # Load parameters
     efficiency = np.squeeze(
-        np.array(pd.read_csv(ppj("IN_DATA", "ef.csv")).values, dtype=float)
+        np.array(
+            pd.read_csv(ppj("IN_DATA", "efficiency_multiplier.csv")).values,
+            dtype=np.float64,
+        )
     )
-    survival_rates = np.array(pd.read_csv(ppj("IN_DATA", "sr.csv")).values, dtype=float)
 
-    with open(ppj("IN_MODEL_SPECS", "setup.json")) as json_file:
+    fertility_rates = np.array(
+        pd.read_csv(ppj("OUT_DATA", "fertility_rates.csv")).values, dtype=np.float64
+    )
+    survival_rates = np.array(
+        pd.read_csv(ppj("OUT_DATA", "survival_rates.csv")).values, dtype=np.float64
+    )
+
+    population_growth_rate = fertility_rates[0]
+    survival_rates = survival_rates[0, :]
+
+    with open(ppj("IN_MODEL_SPECS", f"stationary_{setup}.json")) as json_file:
         params = json.load(json_file)
 
     alpha = np.float64(params["alpha"])
     beta = np.float64(params["beta"])
     sigma = np.float64(params["sigma"])
-    reform = np.float64(params["reform"])
     age_max = np.int32(params["age_max"])
     age_retire = np.int32(params["age_retire"])
-    population_growth_rate = np.float64(params["population_growth_rate"])
-    productivity_growth_rate = np.float64(params["productivity_growth_rate"])
-    n_prod_states = np.int32(params["n_prod_states"])
     zeta = np.float64(params["zeta"])
     psi = np.float64(params["psi"])
     delta_k = np.float64(params["delta_k"])
     delta_hc = np.float64(params["delta_hc"])
-    productivity_init = np.array(params["z_init"], dtype=np.float64)
-    transition_prod_states = np.array(
-        params["transition_prod_states"], dtype=np.float64
-    )
     capital_min = np.float64(params["capital_min"])
     capital_max = np.float64(params["capital_max"])
     n_gridpoints_capital = np.int32(params["n_gridpoints_capital"])
@@ -53,7 +61,6 @@ if __name__ == "__main__":
     income_tax_rate = np.float64(params["income_tax_rate"])
     aggregate_capital_in = np.float64(params["aggregate_capital_init"])
     aggregate_labor_in = np.float64(params["aggregate_labor_init"])
-    prod_states = np.array(params["prod_states"], dtype=np.float64)
     gamma = np.float64(params["gamma"])
     tolerance_capital = np.float64(params["tolerance_capital"])
     tolerance_labor = np.float64(params["tolerance_labor"])
@@ -75,49 +82,11 @@ if __name__ == "__main__":
     # Normalized measure of each generation (sum up to 1)
     mass = mass / sum(mass)
 
-    # Adjust parameters in case of reform
-    efficiency = np.ones((age_max), dtype=np.float64)
-
-    if reform == 0:
-        pass
-    elif reform == 1:
-        income_tax_rate = np.float64(0.0)
-        aggregate_capital_in = np.float64(4.244)
-        aggregate_labor_in = np.float64(0.3565)
-        prod_states = np.array([3.0, 0.5], dtype=np.float64)
-        gamma = np.float64(0.42)
-    elif reform == 2:
-        income_tax_rate = np.float64(0.11)
-        aggregate_capital_in = np.float64(1.0792)
-        aggregate_labor_in = np.float64(0.1616)
-        prod_states = np.array([0.5, 0.5], dtype=np.float64)
-        gamma = np.float64(0.42)
-    elif reform == 3:
-        income_tax_rate = np.float64(0.0)
-        aggregate_capital_in = np.float64(1.209551542349482)
-        aggregate_labor_in = np.float64(0.160261889093575)
-        prod_states = np.array([0.5, 0.5], dtype=np.float64)
-        gamma = np.float64(1.0)
-    elif reform == 4:
-        income_tax_rate = np.float64(0.11)
-        aggregate_capital_in = np.float64(5.4755)
-        aggregate_labor_in = np.float64(0.7533)
-        prod_states = np.array([3.0, 0.5], dtype=np.float64)
-        gamma = np.float64(0.999)
-    elif reform == 5:
-        income_tax_rate = np.float64(0.0)
-        aggregate_capital_in = np.float64(6.845)
-        aggregate_labor_in = np.float64(0.7535)
-        prod_states = np.array([3.0, 0.5], dtype=np.float64)
-        gamma = np.float64(0.999)
-
     num_iterations_inner = 0  # Counter for iterations
 
     aggregate_capital_out = aggregate_capital_in + 10
     aggregate_labor_out = aggregate_labor_in + 10
     neg = np.float64(-1e10)  # very small number
-
-    solve_baseline_model = True
 
     ################################################################
     # Loop over capital, labor and pension benefits
@@ -127,7 +96,6 @@ if __name__ == "__main__":
         (abs(aggregate_capital_out - aggregate_capital_in) > tolerance_capital)
         or (abs(aggregate_labor_out - aggregate_labor_in) > tolerance_labor)
     ):
-
         num_iterations_inner += 1
 
         print(f"Iteration {num_iterations_inner} out of {max_iterations_inner}")
@@ -179,6 +147,7 @@ if __name__ == "__main__":
             psi=psi,
             delta_hc=delta_hc,
             efficiency=efficiency,
+            survival_rates=survival_rates,
         )
 
         ############################################################################
@@ -204,6 +173,7 @@ if __name__ == "__main__":
             hc_grid=hc_grid,
             mass=mass,
             population_growth_rate=population_growth_rate,
+            survival_rates=survival_rates,
         )
 
         # Update the guess on capital and labor
@@ -289,3 +259,36 @@ if __name__ == "__main__":
     # Calculate Gini coefficient
     gini_index, _, _ = gini(mass_distribution, income)
     print(f"gini_index = {gini_index}")
+
+    results = {
+        "aggregate_capital_in": aggregate_capital_in,
+        "aggregate_labor_in": aggregate_labor_in,
+        "wage_rate": wage_rate,
+        "interest_rate": interest_rate,
+        "pension_benefit": pension_benefit,
+        "policy_capital_working": policy_capital_working,
+        "policy_hc_working": policy_hc_working,
+        "policy_labor_working": policy_labor_working,
+        "policy_capital_retired": policy_capital_retired,
+        "mass_distribution_full_working": mass_distribution_full_working,
+        "mass_distribution_full_retired": mass_distribution_full_retired,
+        "average_hours_worked": hours,
+    }
+
+    return results
+
+
+#####################################################
+# SCRIPT
+######################################################
+
+
+if __name__ == "__main__":
+    model_name = sys.argv[1]
+    model = json.load(
+        open(ppj("IN_MODEL_SPECS", model_name + ".json"), encoding="utf-8")
+    )
+    results = solve_stationary(model_name)
+
+    with open(ppj("OUT_ANALYSIS", f"stationary_{model_name}.pickle"), "wb") as out_file:
+        pickle.dump(results, out_file)

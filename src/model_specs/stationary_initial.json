@@ -1,0 +1,47 @@
+{
+  "beta": 0.97,
+  "sigma": 2.0,
+  "alpha": 0.36,
+  "delta_k": 0.06,
+  "reform": 3,
+  "age_max": 66,
+  "age_retire": 46,
+  "population_growth_rate": 0.011,
+  "productivity_growth_rate": 0.018,
+  "n_prod_states": 2,
+  "transition_prod_states": [
+    [
+      1.0,
+      0.0
+    ],
+    [
+      0.0,
+      1.0
+    ]
+  ],
+  "z_init": [
+    1.0,
+    0.0
+  ],
+  "capital_min": 0.001,
+  "capital_max": 30.0,
+  "n_gridpoints_capital": 50,
+  "hc_min": 0.5,
+  "hc_max": 2.0,
+  "n_gridpoints_hc": 20,
+  "hc_init": 0.5,
+  "delta_hc": 0.008,
+  "psi": 0.65,
+  "zeta": 0.16,
+  "income_tax_rate": 0.11,
+  "aggregate_capital_init": 1.209551542349482,
+  "aggregate_labor_init": 0.160261889093575,
+  "gamma": 1.0,
+  "prod_states": [
+    1.0,
+    1.0
+  ],
+  "tolerance_capital": 0.0001,
+  "tolerance_labor": 0.0001,
+  "max_iterations_inner": 3
+}

@@ -282,6 +282,7 @@ def solve_by_backward_induction_hc_readable(
     zeta,
     psi,
     delta_hc,
+    survival_rates,
 ):
     """ Calculate household policy functions.
 
@@ -554,6 +555,7 @@ def solve_by_backward_induction_hc_vectorized(
     psi,
     delta_hc,
     efficiency,
+    survival_rates,
 ):
     """ Calculate household policy functions.
 
@@ -670,18 +672,19 @@ def solve_by_backward_induction_hc_vectorized(
 
         # Solve for policy and value function
         value_retired_tmp, policy_capital_retired_tmp = solve_retired(
-            assets_this_period,
-            assets_next_period,
-            interest_rate,
-            pension_benefit,
-            beta,
-            gamma,
-            sigma,
-            neg,
-            continuation_value,
-            n_gridpoints_capital,
-            policy_capital_retired_tmp,
-            value_retired_tmp,
+            assets_this_period=assets_this_period,
+            assets_next_period=assets_next_period,
+            interest_rate=interest_rate,
+            pension_benefit=pension_benefit,
+            beta=beta,
+            gamma=gamma,
+            sigma=sigma,
+            neg=neg,
+            continuation_value=continuation_value,
+            n_gridpoints_capital=n_gridpoints_capital,
+            survival_rate=survival_rates[age_idx],
+            policy_capital_retired_tmp=n_gridpoints_hc,
+            value_retired_tmp=value_retired_tmp,
         )
 
         # Store results
@@ -757,6 +760,7 @@ def solve_by_backward_induction_hc_vectorized(
             n_gridpoints_capital=n_gridpoints_capital,
             n_gridpoints_hc=n_gridpoints_hc,
             efficiency=np.float64(efficiency[age_idx]),
+            survival_rate=survival_rates[age_idx],
             policy_capital_working_tmp=policy_capital_working_tmp,
             policy_hc_working_tmp=policy_hc_working_tmp,
             policy_labor_working_tmp=policy_labor_working_tmp,
@@ -789,6 +793,7 @@ def solve_retired(
     neg,
     continuation_value,
     n_gridpoints_capital,
+    survival_rate,
     policy_capital_retired_tmp,
     value_retired_tmp,
 ):
@@ -820,6 +825,8 @@ def solve_retired(
         continuation_value:
             ...
         n_gridpoints_capital:
+            ...
+        survival_rate:
             ...
         policy_capital_retired_tmp:
             ...
@@ -856,7 +863,7 @@ def solve_retired(
     flow_utility = np.where(consumption < 0.0, neg, flow_utility)
 
     # Calculate value on meshes (i.e. for all choices)
-    value_full = flow_utility + beta * continuation_value
+    value_full = flow_utility + beta * survival_rate * continuation_value
 
     # Derive optimal policies and store value function given optimal choices
 
@@ -895,6 +902,7 @@ def solve_working(
     n_gridpoints_capital,
     n_gridpoints_hc,
     efficiency,
+    survival_rate,
     policy_capital_working_tmp,
     policy_hc_working_tmp,
     policy_labor_working_tmp,
@@ -945,6 +953,8 @@ def solve_working(
         n_gridpoints_hc: ...
             ...
         efficiency: ...
+            ...
+        survival_rate: ...
             ...
         policy_capital_working_tmp: ...
             ...
@@ -1005,7 +1015,7 @@ def solve_working(
     flow_utility = np.where(hc_effort > 1.0, neg, flow_utility)
 
     # Value function on the complete mesh (i.e. for all possible choices)
-    value_full = flow_utility + beta * continuation_value
+    value_full = flow_utility + beta * survival_rate * continuation_value
 
     # Derive optimal policies and store value function given optimal choices
     policy_capital_working_tmp = np.argmax(np.max(value_full, axis=3), axis=1)
