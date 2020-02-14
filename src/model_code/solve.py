@@ -1,12 +1,12 @@
 import numba as nb
 import numpy as np
 
-from src.model_code.within_period import get_consumption
-from src.model_code.within_period import get_consumption_hc
-from src.model_code.within_period import get_hc_effort
-from src.model_code.within_period import get_labor_input
-from src.model_code.within_period import get_labor_input_hc
-from src.model_code.within_period import util
+from src.model_code.within_period import get_consumption  # noqa:F401
+from src.model_code.within_period import get_consumption_hc  # noqa:F401
+from src.model_code.within_period import get_hc_effort  # noqa:F401
+from src.model_code.within_period import get_labor_input  # noqa:F401
+from src.model_code.within_period import get_labor_input_hc  # noqa:F401
+from src.model_code.within_period import util  # noqa:F401
 
 
 #########################################################################
@@ -652,50 +652,71 @@ def solve_by_backward_induction_hc_readable(
                         hc_this_period = hc_grid[hc_this_period_idx]
                         hc_next_period = hc_grid[hc_next_period_idx]
 
-                        # Optimal labor supply
-                        lab = get_labor_input_hc(
-                            assets_this_period=assets_this_period,
-                            assets_next_period=assets_next_period,
-                            interest_rate=interest_rate,
-                            wage_rate=wage_rate,
-                            income_tax_rate=income_tax_rate,
-                            hc_this_period=hc_this_period,
-                            gamma=gamma,
-                        )
-
                         # Implied hc effort
-                        hc_effort = get_hc_effort(
-                            hc_this_period=hc_this_period,
-                            hc_next_period=hc_next_period,
-                            zeta=zeta,
-                            psi=psi,
-                            delta_hc=delta_hc,
-                        )
+                        # hc_effort = get_hc_effort(
+                        #     hc_this_period=hc_this_period,
+                        #     hc_next_period=hc_next_period,
+                        #     zeta=zeta,
+                        #     psi=psi,
+                        #     delta_hc=delta_hc,
+                        # )
+                        hc_effort = zeta ** (-1) * (
+                            hc_next_period - hc_this_period * (1 - delta_hc)
+                        ) ** (1 / psi)
+                        if np.isnan(hc_effort):
+                            hc_effort = 0.0
+
+                        # # Optimal labor supply
+                        # labor_input = get_labor_input_hc(
+                        #     assets_this_period=assets_this_period,
+                        #     assets_next_period=assets_next_period,
+                        #     interest_rate=interest_rate,
+                        #     wage_rate=wage_rate,
+                        #     income_tax_rate=income_tax_rate,
+                        #     hc_this_period=hc_this_period,
+                        #     gamma=gamma,
+                        # )
+                        labor_input = 1 - hc_effort
 
                         # Implied consumption
-                        consumption = get_consumption_hc(
-                            assets_this_period=assets_this_period,
-                            assets_next_period=assets_next_period,
-                            pension_benefit=np.float64(0.0),
-                            labor_input=lab,
-                            interest_rate=interest_rate,
-                            wage_rate=wage_rate,
-                            income_tax_rate=income_tax_rate,
-                            hc_this_period=hc_this_period,
+                        # consumption = get_consumption_hc(
+                        #     assets_this_period=assets_this_period,
+                        #     assets_next_period=assets_next_period,
+                        #     pension_benefit=np.float64(0.0),
+                        #     labor_input=labor_input,
+                        #     interest_rate=interest_rate,
+                        #     wage_rate=wage_rate,
+                        #     income_tax_rate=income_tax_rate,
+                        #     hc_this_period=hc_this_period,
+                        # )
+                        consumption = (
+                            (1 + interest_rate) * assets_this_period
+                            + (1 - income_tax_rate)
+                            * wage_rate
+                            * hc_this_period
+                            * labor_input
+                            - assets_next_period
                         )
 
                         # Instantaneous utility
-                        if consumption <= 0.0:
+                        if consumption <= 0.0 or hc_effort > 1.0:
                             flow_utility = neg
                             assets_next_period_idx = n_gridpoints_capital - 1
                         else:
-                            flow_utility = util(
-                                consumption=consumption,
-                                labor_input=lab,
-                                hc_effort=np.float64(0.0),
-                                gamma=gamma,
-                                sigma=sigma,
-                            )
+                            # flow_utility = util(
+                            #     consumption=consumption,
+                            #     labor_input=labor_input,
+                            #     hc_effort=np.float64(0.0),
+                            #     gamma=gamma,
+                            #     sigma=sigma,
+                            # )
+                            flow_utility = (
+                                (
+                                    (consumption ** gamma)
+                                    * (1 - labor_input - hc_effort) ** (1 - gamma)
+                                )
+                                ** (1 - sigma)
+                            ) / (1 - sigma)
 
                         # Right-hand side of Bellman equation
                         if age_idx == duration_working - 1:  # retired next period
@@ -721,7 +742,7 @@ def solve_by_backward_induction_hc_readable(
                             ] = value_current
                             policy_labor_working[
                                 assets_this_period_idx, hc_this_period_idx, age_idx
-                            ] = lab
+                            ] = labor_input
                             policy_capital_working[
                                 assets_this_period_idx, hc_this_period_idx, age_idx
                             ] = assets_next_period_idx
@@ -756,6 +777,7 @@ def solve_by_backward_induction_hc_vectorized(
     zeta,
     psi,
     delta_hc,
+    efficiency,
 ):
     """ Calculate household policy functions.
 
@@ -835,66 +857,73 @@ def solve_by_backward_induction_hc_vectorized(
     # BACKWARD INDUCTION
     ############################################################
 
+    # Retired agents
+
     # Last period utility
     consumption_last = (1 + interest_rate) * capital_grid + pension_benefit
     flow_utility_last = (consumption_last ** ((1 - sigma) * gamma)) / (1 - sigma)
     value_retired[:, -1] = flow_utility_last
 
-    # Retired agents
+    # Create meshes for assets this period and assets next period
+    assets_next_period, assets_this_period = np.meshgrid(capital_grid, capital_grid)
+
+    # Initiate objects to store temporary policy and value functions
+    policy_capital_retired_tmp = np.zeros(n_gridpoints_capital, dtype=np.int32)
+    value_retired_tmp = np.zeros(n_gridpoints_capital, dtype=np.float64)
+
+    # Iterate backwards through retirement period
     for age_idx in range(duration_retired - 2, -1, -1):
 
-        # create meshes for assets this period and assets next period
-        assets_this_period, assets_next_period = np.meshgrid(capital_grid, capital_grid)
-
-        # calculate flow utility on meshes
-        consumption = (
-            (1 + interest_rate) * assets_this_period
-            + pension_benefit
-            - assets_next_period
-        )
-        flow_utility = (consumption ** gamma) ** (1 - sigma) / (1 - sigma)
-        flow_utility[consumption < 0.0] = neg
-
-        # look up continuation values on meshes
+        # Look up continuation values on meshes
         continuation_value = np.repeat(
-            value_retired[:, age_idx + 1, np.newaxis], n_gridpoints_capital, axis=1
+            value_retired[np.newaxis, :, age_idx + 1], n_gridpoints_capital, axis=0
         )
 
-        # calculate value on meshes (i.e. for all choices)
-        value_full = flow_utility + beta * continuation_value
-
-        # derive optimal policies and store value function given optimal choices
-        policy_capital_retired[:, age_idx] = np.argmax(value_full, axis=0)
-        value_retired[:, age_idx] = np.max(value_full, axis=0)
-
-    # Working agents
-    for age_idx in range(duration_working - 1, -1, -1):
-
-        # create meshes for assets this period and assets next period
-        (
+        # Derive optimal policies and store value function given optimal choices
+        value_retired_tmp, policy_capital_retired_tmp = solve_retired(
             assets_this_period,
             assets_next_period,
-            hc_this_period,
-            hc_next_period,
-        ) = np.meshgrid(capital_grid, capital_grid, hc_grid, hc_grid,)
-
-        # calculate flow utility on meshes
-        hc_effort = zeta ** (-1) * (
-            hc_next_period - hc_this_period * (1 - delta_hc)
-        ) ** (1 / psi)
-        hc_effort[np.isnan(hc_effort)] = 0.0
-        labor_input = 1 - hc_effort
-        consumption = (
-            (1 + interest_rate) * assets_this_period
-            + (1 - income_tax_rate) * wage_rate * hc_this_period * labor_input
-            - assets_next_period
+            interest_rate,
+            pension_benefit,
+            beta,
+            gamma,
+            sigma,
+            neg,
+            continuation_value,
+            n_gridpoints_capital,
+            policy_capital_retired_tmp,
+            value_retired_tmp,
         )
-        flow_utility = (
-            ((consumption ** gamma) * (1 - labor_input - hc_effort) ** (1 - gamma))
-            ** (1 - sigma)
-        ) / (1 - sigma)
-        flow_utility[consumption < 0.0] = neg
-        flow_utility[hc_effort > 1.0] = neg
+
+        policy_capital_retired[:, age_idx] = policy_capital_retired_tmp
+        value_retired[:, age_idx] = value_retired_tmp
+
+    # Working agents
+
+    # Create meshes for assets this period and assets next period
+    (
+        assets_next_period,
+        assets_this_period,
+        hc_this_period,
+        hc_next_period,
+    ) = np.meshgrid(capital_grid, capital_grid, hc_grid, hc_grid,)
+
+    # Initiate objects to store temporary policy and value functions
+    policy_capital_working_tmp = np.zeros(
+        (n_gridpoints_capital, n_gridpoints_hc), dtype=np.int32
+    )
+    policy_hc_working_tmp = np.zeros(
+        (n_gridpoints_capital, n_gridpoints_hc), dtype=np.int32
+    )
+    policy_labor_working_tmp = np.zeros(
+        (n_gridpoints_capital, n_gridpoints_hc), dtype=np.float64
+    )
+    value_working_tmp = np.zeros(
+        (n_gridpoints_capital, n_gridpoints_hc), dtype=np.float64
+    )
+
+    # iterate backwards through working period
+    for age_idx in range(duration_working - 1, -1, -1):
 
         # look up continuation values on meshes
         if age_idx == duration_working - 1:  # retired next period
@@ -905,28 +934,163 @@ def solve_by_backward_induction_hc_vectorized(
             value_next_period = value_working[:, :, age_idx + 1]
 
         continuation_value = np.repeat(
-            value_next_period[:, :, np.newaxis], n_gridpoints_hc, axis=2
+            value_next_period[np.newaxis, :, :], n_gridpoints_capital, axis=0
         )
         continuation_value = np.repeat(
-            continuation_value[:, :, :, np.newaxis], n_gridpoints_capital, axis=3
+            continuation_value[:, :, np.newaxis, :], n_gridpoints_hc, axis=2
         )
-        continuation_value = np.moveaxis(continuation_value, 3, 0)
-        continuation_value = np.moveaxis(continuation_value, 3, 2)
 
-        # calculate value on meshes (i.e. for all choices)
-        value_full = flow_utility + beta * continuation_value
+        (
+            policy_capital_working_tmp,
+            policy_hc_working_tmp,
+            policy_labor_working_tmp,
+            value_working_tmp,
+        ) = solve_working(
+            assets_this_period,
+            assets_next_period,
+            hc_this_period,
+            hc_next_period,
+            interest_rate,
+            wage_rate,
+            income_tax_rate,
+            beta,
+            gamma,
+            sigma,
+            neg,
+            continuation_value,
+            delta_hc,
+            zeta,
+            psi,
+            n_gridpoints_capital,
+            n_gridpoints_hc,
+            policy_capital_working_tmp,
+            policy_hc_working_tmp,
+            policy_labor_working_tmp,
+            value_working_tmp,
+        )
 
         # derive optimal policies and store value function given optimal choices
-        policy_capital_working = None
-        policy_hc_working = None
-        policy_labor_working = None
-        policy_capital_retired = None
+        policy_capital_working[:, :, age_idx] = policy_capital_working_tmp
+        policy_hc_working[:, :, age_idx] = policy_hc_working_tmp
+        policy_labor_working[:, :, age_idx] = policy_labor_working_tmp
+        value_working[:, :, age_idx] = value_working_tmp
 
     return (
         policy_capital_working,
         policy_hc_working,
         policy_labor_working,
         policy_capital_retired,
+    )
+
+
+def solve_retired(
+    assets_this_period,
+    assets_next_period,
+    interest_rate,
+    pension_benefit,
+    beta,
+    gamma,
+    sigma,
+    neg,
+    continuation_value,
+    n_gridpoints_capital,
+    policy_capital_retired_tmp,
+    value_retired_tmp,
+):
+    # calculate flow utility on meshes
+    consumption = (
+        (1 + interest_rate) * assets_this_period + pension_benefit - assets_next_period
+    )
+    flow_utility = (consumption ** gamma) ** (1 - sigma) / (1 - sigma)
+    flow_utility = np.where(consumption < 0.0, neg, flow_utility)
+
+    # calculate value on meshes (i.e. for all choices)
+    value_full = flow_utility + beta * continuation_value
+
+    # derive optimal policies and store value function given optimal choices
+    for assets_this_period_idx in range(n_gridpoints_capital):
+        policy_capital_retired_tmp[assets_this_period_idx] = np.argmax(
+            value_full[assets_this_period_idx, :]
+        )
+        value_retired_tmp[assets_this_period_idx] = np.max(
+            value_full[assets_this_period_idx, :]
+        )
+
+    return value_retired_tmp, policy_capital_retired_tmp
+
+
+def solve_working(
+    assets_this_period,
+    assets_next_period,
+    hc_this_period,
+    hc_next_period,
+    interest_rate,
+    wage_rate,
+    income_tax_rate,
+    beta,
+    gamma,
+    sigma,
+    neg,
+    continuation_value,
+    delta_hc,
+    zeta,
+    psi,
+    n_gridpoints_capital,
+    n_gridpoints_hc,
+    policy_capital_working_tmp,
+    policy_hc_working_tmp,
+    policy_labor_working_tmp,
+    value_working_tmp,
+):
+    # implied hc effort
+    hc_effort = zeta ** (-1) * (hc_next_period - hc_this_period * (1 - delta_hc)) ** (
+        1 / psi
+    )
+    hc_effort = np.where(np.isnan(hc_effort), 0.0, hc_effort)
+    # labor input
+    labor_input = 1 - hc_effort
+    # consumption
+    consumption = (
+        (1 + interest_rate) * assets_this_period
+        + (1 - income_tax_rate) * wage_rate * hc_this_period * labor_input
+        - assets_next_period
+    )
+    # flow utility
+    flow_utility = (
+        ((consumption ** gamma) * (1 - labor_input - hc_effort) ** (1 - gamma))
+        ** (1 - sigma)
+    ) / (1 - sigma)
+    flow_utility = np.where(consumption < 0.0, neg, flow_utility)
+    flow_utility = np.where(hc_effort > 1.0, neg, flow_utility)
+    # value function
+    value_full = flow_utility + beta * continuation_value
+
+    # derive optimal policies and store value function given optimal choices
+    policy_capital_working_tmp = np.argmax(np.max(value_full, axis=3), axis=1)
+    policy_hc_working_tmp = np.argmax(np.max(value_full, axis=1), axis=2)
+    value_working_tmp = np.max(np.max(value_full, axis=3), axis=1)
+    for assets_this_period_idx in range(n_gridpoints_capital):
+        for hc_this_period_idx in range(n_gridpoints_hc):
+            assets_next_period_idx = policy_capital_working_tmp[
+                assets_this_period_idx, hc_this_period_idx
+            ]
+            hc_next_period_idx = policy_hc_working_tmp[
+                assets_this_period_idx, hc_this_period_idx
+            ]
+            policy_labor_working_tmp[
+                assets_this_period_idx, hc_this_period_idx
+            ] = labor_input[
+                assets_this_period_idx,
+                assets_next_period_idx,
+                hc_this_period_idx,
+                hc_next_period_idx,
+            ]
+
+    return (
+        policy_capital_working_tmp,
+        policy_hc_working_tmp,
+        policy_labor_working_tmp,
+        value_working_tmp,
     )
 
 
@@ -944,6 +1108,7 @@ def aggregate_hc_readable(
     hc_grid,
     mass,
     population_growth_rate,
+    efficiency,
 ):
     """ Calculate aggregate variables and cross-sectional distribution from HH policy functions.
 

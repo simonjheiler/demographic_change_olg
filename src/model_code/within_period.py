@@ -44,6 +44,8 @@ def get_labor_input(
     """
     if efficiency == 0.0:
         labor_input = 0.0
+    elif gamma == 1.0:
+        labor_input = 1.0
     else:
         labor_input = (
             gamma * (1.0 - income_tax_rate) * productivity * efficiency * wage_rate

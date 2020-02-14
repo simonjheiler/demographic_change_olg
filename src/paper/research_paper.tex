@@ -75,53 +75,29 @@
 
 \maketitle
 
-
-\begin{abstract}
-	Some abstract here.
-\end{abstract}
+\input{0_abstract.tex}
 \clearpage
 
-\section{Introduction} % (fold)
-\label{sec:introduction}
+\input{1_introduction.tex}
+\newpage
 
-If you are using this template, please cite this item from the references: \citet{GaudeckerEconProjectTemplates}
+\input{2_data.tex}
+\newpage
 
-\citet{Schelling69} example in the code is taken from \citet{StachurskiSargent13}
+\input{3_model.tex}
+\newpage
 
-The decision rule of an agent is the following:
-\input{formulas/decision_rule}
+\input{4_results.tex}
+\newpage
 
-\begin{figure}
-    \caption{Segregation by cycle in the baseline \citet{Schelling69} model as in the \citet{StachurskiSargent13} example}
-
-    \includegraphics[width=\textwidth]{../../out/figures/schelling_baseline}
-
-\end{figure}
-
-
-\begin{figure}
-    \caption{Segregation by cycle in the baseline \citet{Schelling69} model, limiting the number of potential moves per period to two}
-
-    \includegraphics[width=\textwidth]{../../out/figures/schelling_max_moves_2}
-
-\end{figure}
-
-% section introduction (end)
-
-
-
+\input{5_conclusion.tex}
+\newpage
 
 \setstretch{1}
 \printbibliography
 \setstretch{1.5}
 
-
-
-
-% \appendix
-
-% The chngctr package is needed for the following lines.
-% \counterwithin{table}{section}
-% \counterwithin{figure}{section}
+\appendix
+\input{A1_computation.tex}
 
 \end{document}

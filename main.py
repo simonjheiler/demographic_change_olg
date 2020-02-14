@@ -187,6 +187,7 @@ if __name__ == "__main__":
             zeta=zeta,
             psi=psi,
             delta_hc=delta_hc,
+            efficiency=efficiency,
         )
 
         ############################################################################
@@ -214,6 +215,7 @@ if __name__ == "__main__":
             hc_grid=hc_grid,
             mass=mass,
             population_growth_rate=population_growth_rate,
+            efficiency=efficiency,
         )
 
         # Update the guess on capital and labor

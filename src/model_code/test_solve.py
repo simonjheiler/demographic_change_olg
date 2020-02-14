@@ -12,9 +12,9 @@ from src.model_code.solve import solve_by_backward_induction_hc_vectorized
 
 alpha = 0.36
 beta = 0.97
-gamma = 0.42
+gamma = 1.0
 delta_k = 0.06
-delta_hc = 0.008
+delta_hc = 0.0
 sigma = 2.0
 age_max = 66
 age_retire = 46
@@ -23,11 +23,11 @@ capital_min = 0.01
 capital_max = 30.0
 n_gridpoints_capital = 100
 hc_min = 0.5
-hc_max = 0.5
-n_gridpoints_hc = 1
+hc_max = 3.0
+n_gridpoints_hc = 2
 hc_init = 0.5
 n_prod_states = 2
-prod_states = np.array([0.5, 0.5], dtype=np.float64)
+prod_states = np.array([0.5, 3.0], dtype=np.float64)
 transition_prod_states = np.array([[1.0, 0.0], [0.0, 1.0]], dtype=np.float64)
 efficiency = np.ones(age_max, dtype=np.float64)
 income_tax_rate = 0.11
@@ -121,6 +121,7 @@ def setup_solve_hc():
 
 
 def test_solve_baseline_equals_hc(setup_solve_baseline, setup_solve_hc):
+    setup_solve_hc["delta_hc"] = 0.0
     (
         policy_capital_working_baseline,
         policy_labor_working_baseline,
@@ -131,7 +132,7 @@ def test_solve_baseline_equals_hc(setup_solve_baseline, setup_solve_hc):
         policy_hc_working_hc,
         policy_labor_working_hc,
         policy_capital_retired_hc,
-    ) = solve_by_backward_induction_hc_readable(**setup_solve_hc)
+    ) = solve_by_backward_induction_hc_vectorized(**setup_solve_hc)
     assert_array_equal(
         policy_capital_working_baseline[0, :, :], policy_capital_working_hc[:, 0, :]
     )
@@ -142,6 +143,7 @@ def test_solve_baseline_equals_hc(setup_solve_baseline, setup_solve_hc):
 
 
 def test_solve_hc_readable_equals_vectorized(setup_solve_hc):
+    setup_solve_hc["gamma"] = 1.0
     (
         policy_capital_working_readable,
         policy_hc_working_readable,
@@ -155,10 +157,10 @@ def test_solve_hc_readable_equals_vectorized(setup_solve_hc):
         policy_capital_retired_vectorized,
     ) = solve_by_backward_induction_hc_vectorized(**setup_solve_hc)
     assert_array_equal(
+        policy_capital_retired_readable, policy_capital_retired_vectorized
+    )
+    assert_array_equal(
         policy_capital_working_readable, policy_capital_working_vectorized
     )
     assert_array_equal(policy_hc_working_readable, policy_hc_working_vectorized)
     assert_array_equal(policy_labor_working_readable, policy_labor_working_vectorized)
-    assert_array_equal(
-        policy_capital_retired_readable, policy_capital_retired_vectorized
-    )
