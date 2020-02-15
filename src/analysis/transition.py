@@ -50,7 +50,7 @@ fertility_rates = np.array(
     pd.read_csv(ppj("OUT_DATA", "fertility_rates.csv")).values, dtype=np.float64
 )
 survival_rates = np.array(
-    pd.read_csv(ppj("OUT_DATA", "survival_rates.csv")).values, dtype=np.float64
+    pd.read_csv(ppj("OUT_DATA", "survival_rates_old.csv")).values, dtype=np.float64
 )
 mass = np.array(
     pd.read_csv(ppj("OUT_DATA", "mass_distribution.csv")).values, dtype=np.float64
@@ -462,17 +462,20 @@ def solve_transition(
 
 
 if __name__ == "__main__":
+
     model_name = sys.argv[1]
     transition_params = json.load(
         open(ppj("IN_MODEL_SPECS", "transition.json"), encoding="utf-8")
     )
 
-    # with open(ppj("OUT_ANALYSIS", "stationary_initial.pickle"), "wb") as out_file:
-    #     stationary_initial = pickle.load(results, out_file)
-    # with open(ppj("OUT_ANALYSIS", "stationary_final.pickle"), "wb") as out_file:
-    #     stationary_final = pickle.load(results, out_file)
-    #
-    # results = solve_transition(stationary_initial, stationary_final, transition_params)
+    with open(ppj("OUT_ANALYSIS", "stationary_initial.pickle"), "rb") as in_file:
+        results_stationary_initial = pickle.load(in_file)
+    with open(ppj("OUT_ANALYSIS", "stationary_final.pickle"), "rb") as in_file:
+        results_stationary_final = pickle.load(in_file)
 
-    # with open(ppj("OUT_ANALYSIS", f"transition.pickle"), "wb") as out_file:
-    #     pickle.dump(results, out_file)
+    results_transition = solve_transition(
+        results_stationary_initial, results_stationary_final, transition_params
+    )
+
+    with open(ppj("OUT_ANALYSIS", f"transition.pickle"), "wb") as out_file:
+        pickle.dump(results_transition, out_file)

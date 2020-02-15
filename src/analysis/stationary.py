@@ -53,7 +53,7 @@ fertility_rates = np.array(
     pd.read_csv(ppj("OUT_DATA", "fertility_rates.csv")).values, dtype=np.float64
 )
 survival_rates_all = np.array(
-    pd.read_csv(ppj("OUT_DATA", "survival_rates.csv")).values, dtype=np.float64
+    pd.read_csv(ppj("OUT_DATA", "survival_rates_old.csv")).values, dtype=np.float64
 )
 mass_all = np.array(
     pd.read_csv(ppj("OUT_DATA", "mass_distribution.csv")).values, dtype=np.float64

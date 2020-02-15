@@ -11,7 +11,7 @@ def build(ctx):
             deps=[
                 ctx.path_to(ctx, "IN_DATA", "efficiency_multiplier.csv"),
                 ctx.path_to(ctx, "OUT_DATA", "fertility_rates.csv"),
-                ctx.path_to(ctx, "OUT_DATA", "survival_rates.csv"),
+                ctx.path_to(ctx, "OUT_DATA", "survival_rates_old.csv"),
                 ctx.path_to(ctx, "IN_MODEL_CODE", "solve.py"),
                 ctx.path_to(ctx, "IN_MODEL_CODE", "aggregate.py"),
                 ctx.path_to(ctx, "IN_MODEL_SPECS", f"stationary_{model}.json"),
@@ -20,3 +20,20 @@ def build(ctx):
             append=model,
             name=f"stationary_{model}",
         )
+
+    ctx(
+        features="run_py_script",
+        source="transition.py",
+        deps=[
+            ctx.path_to(ctx, "IN_DATA", "efficiency_multiplier.csv"),
+            ctx.path_to(ctx, "OUT_DATA", "fertility_rates.csv"),
+            ctx.path_to(ctx, "OUT_DATA", "survival_rates_old.csv"),
+            ctx.path_to(ctx, "IN_MODEL_CODE", "solve.py"),
+            ctx.path_to(ctx, "IN_MODEL_CODE", "aggregate.py"),
+            ctx.path_to(ctx, "IN_MODEL_SPECS", "transition.json"),
+            ctx.path_to(ctx, "OUT_ANALYSIS", "stationary_initial.pickle"),
+            ctx.path_to(ctx, "OUT_ANALYSIS", "stationary_final.pickle"),
+        ],
+        target=ctx.path_to(ctx, "OUT_ANALYSIS", "transition.pickle"),
+        name="transition",
+    )

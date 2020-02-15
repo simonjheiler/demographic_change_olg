@@ -6,9 +6,14 @@ def build(ctx):
     ctx(
         features="run_py_script",
         source="simulate_demographics.py",
+        deps=[
+            ctx.path_to(ctx, "IN_DATA", "survival_rates.csv"),
+            ctx.path_to(ctx, "IN_DATA", "fertility_rates.csv"),
+        ],
         target=[
             ctx.path_to(ctx, "OUT_DATA", "fertility_rates.csv"),
             ctx.path_to(ctx, "OUT_DATA", "survival_rates.csv"),
+            ctx.path_to(ctx, "OUT_DATA", "mass.csv"),
         ],
         name="simulate_demographics",
     )
