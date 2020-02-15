@@ -778,6 +778,8 @@ def solve_by_backward_induction_hc_vectorized(
         policy_hc_working,
         policy_labor_working,
         policy_capital_retired,
+        value_retired,
+        value_working,
     )
 
 

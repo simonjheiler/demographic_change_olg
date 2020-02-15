@@ -1,9 +1,9 @@
 import json  # noqa:F401
-import pickle
-import sys
+import pickle  # noqa:F401
+import sys  # noqa:F401
 
 import numpy as np  # noqa:F401
-import pandas as pd
+import pandas as pd  # noqa:F401
 
 from bld.project_paths import project_paths_join as ppj
 from src.model_code.aggregate import aggregate_hc_readable as aggregate_hc
@@ -50,7 +50,7 @@ fertility_rates = np.array(
     pd.read_csv(ppj("OUT_DATA", "fertility_rates.csv")).values, dtype=np.float64
 )
 survival_rates = np.array(
-    pd.read_csv(ppj("OUT_DATA", "survival_rates_old.csv")).values, dtype=np.float64
+    pd.read_csv(ppj("OUT_DATA", "survival_rates.csv")).values, dtype=np.float64
 )
 mass = np.array(
     pd.read_csv(ppj("OUT_DATA", "mass_distribution.csv")).values, dtype=np.float64
@@ -463,7 +463,7 @@ def solve_transition(
 
 if __name__ == "__main__":
 
-    model_name = sys.argv[1]
+    # model_name = sys.argv[1]
     transition_params = json.load(
         open(ppj("IN_MODEL_SPECS", "transition.json"), encoding="utf-8")
     )

@@ -1,9 +1,9 @@
-import json
-import pickle
-import sys
+import json  # noqa:F401
+import pickle  # noqa:F401
+import sys  # noqa:F401
 
-import numpy as np
-import pandas as pd
+import numpy as np  # noqa:F401
+import pandas as pd  # noqa:F401
 
 from bld.project_paths import project_paths_join as ppj
 from src.model_code.aggregate import aggregate_hc_readable as aggregate_hc
@@ -53,7 +53,7 @@ fertility_rates = np.array(
     pd.read_csv(ppj("OUT_DATA", "fertility_rates.csv")).values, dtype=np.float64
 )
 survival_rates_all = np.array(
-    pd.read_csv(ppj("OUT_DATA", "survival_rates_old.csv")).values, dtype=np.float64
+    pd.read_csv(ppj("OUT_DATA", "survival_rates.csv")).values, dtype=np.float64
 )
 mass_all = np.array(
     pd.read_csv(ppj("OUT_DATA", "mass_distribution.csv")).values, dtype=np.float64
@@ -136,6 +136,8 @@ def solve_stationary(model_specs):
             policy_hc_working,
             policy_labor_working,
             policy_capital_retired,
+            value_retired,
+            value_working,
         ) = solve_hc(
             interest_rate=interest_rate,
             wage_rate=wage_rate,
@@ -279,6 +281,8 @@ def solve_stationary(model_specs):
         "policy_hc_working": policy_hc_working,
         "policy_labor_working": policy_labor_working,
         "policy_capital_retired": policy_capital_retired,
+        "value_retired": value_retired,
+        "value_working": value_working,
         "mass_distribution_full_working": mass_distribution_full_working,
         "mass_distribution_full_retired": mass_distribution_full_retired,
         "average_hours_worked": hours,
@@ -295,11 +299,11 @@ def solve_stationary(model_specs):
 
 if __name__ == "__main__":
 
-    model_name = sys.argv[1]
+    model_name = "initial"  # sys.argv[1]
     model_specs = json.load(
         open(ppj("IN_MODEL_SPECS", f"stationary_{model_name}.json"), encoding="utf-8")
     )
-    results = solve_stationary(model_name)
+    results_stationary = solve_stationary(model_specs)
 
     with open(ppj("OUT_ANALYSIS", f"stationary_{model_name}.pickle"), "wb") as out_file:
-        pickle.dump(results, out_file)
+        pickle.dump(results_stationary, out_file)

@@ -7,13 +7,13 @@ def build(ctx):
         features="run_py_script",
         source="simulate_demographics.py",
         deps=[
-            ctx.path_to(ctx, "IN_DATA", "survival_rates.csv"),
-            ctx.path_to(ctx, "IN_DATA", "fertility_rates.csv"),
+            ctx.path_to(ctx, "IN_DATA", "survival_rates_raw.csv"),
+            ctx.path_to(ctx, "IN_DATA", "fertility_rates_raw.csv"),
         ],
         target=[
             ctx.path_to(ctx, "OUT_DATA", "fertility_rates.csv"),
             ctx.path_to(ctx, "OUT_DATA", "survival_rates.csv"),
-            ctx.path_to(ctx, "OUT_DATA", "mass.csv"),
+            ctx.path_to(ctx, "OUT_DATA", "mass_distribution.csv"),
         ],
         name="simulate_demographics",
     )

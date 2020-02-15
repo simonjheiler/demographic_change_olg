@@ -35,7 +35,7 @@ def extrapolate_survival():
     # Read in raw data
     survival_rates_raw = np.squeeze(
         np.array(
-            pd.read_csv(ppj("IN_DATA", "survival_rates_old.csv")).values, dtype=float
+            pd.read_csv(ppj("IN_DATA", "survival_rates_raw.csv")).values, dtype=float
         )
     )
 
@@ -66,7 +66,9 @@ def extrapolate_fertility():
 
     # Read in raw data
     fertility_rates_in = np.squeeze(
-        np.array(pd.read_csv(ppj("IN_DATA", "fertility_rates.csv")).values, dtype=float)
+        np.array(
+            pd.read_csv(ppj("IN_DATA", "fertility_rates_raw.csv")).values, dtype=float
+        )
     )
 
     # Adjustment factors to be changed for simulated change in survival probabilities
@@ -123,7 +125,7 @@ def simulate_mass(fertility_rates, survival_rates):
 def save_data(sample_1, sample_2, sample_3):
     np.savetxt(ppj("OUT_DATA", "survival_rates.csv"), sample_1, delimiter=",")
     np.savetxt(ppj("OUT_DATA", "fertility_rates.csv"), sample_2, delimiter=",")
-    np.savetxt(ppj("OUT_DATA", "mass.csv"), sample_3, delimiter=",")
+    np.savetxt(ppj("OUT_DATA", "mass_distribution.csv"), sample_3, delimiter=",")
 
 
 #####################################################
