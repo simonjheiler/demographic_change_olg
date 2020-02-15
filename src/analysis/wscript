@@ -3,9 +3,8 @@
 
 def build(ctx):
 
-    # ctx.add_group('stationary_eq')
-    for model in "initial", "final":
-        # ctx.set_group('stationary_eq')
+    # Solve for initial and final stationary equilibrium
+    for model in ["initial", "final"]:
         ctx(
             features="run_py_script",
             source="stationary.py",
@@ -15,14 +14,15 @@ def build(ctx):
                 ctx.path_to(ctx, "OUT_DATA", "survival_rates.csv"),
                 ctx.path_to(ctx, "IN_MODEL_CODE", "solve.py"),
                 ctx.path_to(ctx, "IN_MODEL_CODE", "aggregate.py"),
+                ctx.path_to(ctx, "IN_MODEL_SPECS", f"setup.json"),
                 ctx.path_to(ctx, "IN_MODEL_SPECS", f"stationary_{model}.json"),
             ],
             target=ctx.path_to(ctx, "OUT_ANALYSIS", f"stationary_{model}.pickle"),
-            append=model,
+            append=f"{model} stationary equilibrium",
             name=f"stationary_{model}",
         )
 
-    # ctx.add_group('transition_eq')
+    # Solve for transition dynamics
     # ctx(
     #     features="run_py_script",
     #     source="transition.py",

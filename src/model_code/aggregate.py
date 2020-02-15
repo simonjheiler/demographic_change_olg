@@ -244,6 +244,7 @@ def aggregate_hc_readable(
     mass,
     population_growth_rate,
     survival_rates,
+    efficiency,
 ):
     """ Calculate aggregate variables and cross-sectional distribution from HH policy functions.
 
@@ -356,18 +357,25 @@ def aggregate_hc_readable(
                         assets_this_period_idx, hc_this_period_idx, age_idx
                     ]
                     * hc_grid[hc_this_period_idx]
+                    * efficiency[age_idx]
                     * mass_distribution_full_working[
                         assets_this_period_idx, hc_this_period_idx, age_idx
                     ]
                 )
 
         # Aggregate variables
-        asset_distribution_age[age_idx] = np.dot(
-            capital_grid, np.sum(mass_distribution_full_working, axis=1)[:, age_idx]
-        )
-        hc_distribution_age[age_idx] = np.dot(
-            hc_grid, np.sum(mass_distribution_full_working, axis=0)[:, age_idx]
-        )
+        if age_idx < duration_working - 1:
+            asset_distribution_age[age_idx + 1] = np.dot(
+                capital_grid,
+                np.sum(mass_distribution_full_working, axis=1)[:, age_idx + 1],
+            )
+            hc_distribution_age[age_idx + 1] = np.dot(
+                hc_grid, np.sum(mass_distribution_full_working, axis=0)[:, age_idx + 1]
+            )
+        elif age_idx == duration_working - 1:
+            asset_distribution_age[age_idx + 1] = np.dot(
+                capital_grid, mass_distribution_full_retired[:, 0]
+            )
 
     # Retirees
     for age_idx in range(duration_retired - 1):

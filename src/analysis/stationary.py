@@ -12,7 +12,7 @@ from src.model_code.auxiliary import get_income
 from src.model_code.auxiliary import gini
 from src.model_code.auxiliary import reshape_as_vector
 from src.model_code.solve import solve_by_backward_induction_hc_vectorized as solve_hc
-
+from src.model_code.within_period import get_factor_prices
 
 #####################################################
 # PARAMETERS
@@ -43,20 +43,17 @@ tolerance_labor = np.float64(setup["tolerance_labor"])
 max_iterations_inner = np.int32(setup["max_iterations_inner"])
 
 # Load demographic parameters
-efficiency = np.squeeze(
-    np.array(
-        pd.read_csv(ppj("IN_DATA", "efficiency_multiplier.csv")).values,
-        dtype=np.float64,
-    )
+efficiency = np.loadtxt(
+    ppj("IN_DATA", "efficiency_multiplier.csv"), delimiter=",", dtype=np.float64
 )
-fertility_rates = np.array(
-    pd.read_csv(ppj("OUT_DATA", "fertility_rates.csv")).values, dtype=np.float64
+fertility_rates = np.loadtxt(
+    ppj("OUT_DATA", "fertility_rates.csv"), delimiter=",", dtype=np.float64
 )
-survival_rates_all = np.array(
-    pd.read_csv(ppj("OUT_DATA", "survival_rates.csv")).values, dtype=np.float64
+survival_rates_all = np.loadtxt(
+    ppj("OUT_DATA", "survival_rates.csv"), delimiter=",", dtype=np.float64
 )
-mass_all = np.array(
-    pd.read_csv(ppj("OUT_DATA", "mass_distribution.csv")).values, dtype=np.float64
+mass_all = np.loadtxt(
+    ppj("OUT_DATA", "mass_distribution.csv"), delimiter=",", dtype=np.float64
 )
 
 # Calculate derived parameters
@@ -82,7 +79,7 @@ def solve_stationary(model_specs):
     elif setup_name == "final":
         time_idx = -1
 
-    population_growth_rate = fertility_rates[time_idx]
+    population_growth_rate = fertility_rates[time_idx] - 1
     survival_rates = survival_rates_all[:, time_idx]
     mass = mass_all[:, time_idx]
 
@@ -109,22 +106,14 @@ def solve_stationary(model_specs):
         print(f"Iteration {num_iterations_inner} out of {max_iterations_inner}")
 
         # Calculate factor prices from aggregates
-        interest_rate = np.float64(
-            alpha
-            * (aggregate_capital_in ** (alpha - 1))
-            * (aggregate_labor_in ** (1 - alpha))
-            - delta_k
-        )
-        wage_rate = np.float64(
-            (1 - alpha)
-            * (aggregate_capital_in ** alpha)
-            * (aggregate_labor_in ** (-alpha))
-        )
-        pension_benefit = np.float64(
-            income_tax_rate
-            * wage_rate
-            * aggregate_labor_in
-            / np.sum(mass[age_retire - 1 :])
+        (interest_rate, wage_rate, pension_benefit) = get_factor_prices(
+            aggregate_capital=aggregate_capital_in,
+            aggregate_labor=aggregate_labor_in,
+            alpha=alpha,
+            delta_k=delta_k,
+            income_tax_rate=income_tax_rate,
+            mass=mass,
+            age_retire=age_retire,
         )
 
         ############################################################################
@@ -184,6 +173,7 @@ def solve_stationary(model_specs):
             mass=mass,
             population_growth_rate=population_growth_rate,
             survival_rates=survival_rates,
+            efficiency=efficiency,
         )
 
         # Update the guess on capital and labor
@@ -208,20 +198,14 @@ def solve_stationary(model_specs):
     ################################################################
 
     # Calculate equilibrium prices and pension benefits
-    interest_rate = (
-        alpha
-        * (aggregate_capital_in ** (alpha - 1))
-        * (aggregate_labor_in ** (1 - alpha))
-        - delta_k
-    )
-    wage_rate = (
-        (1 - alpha) * (aggregate_capital_in ** alpha) * (aggregate_labor_in ** (-alpha))
-    )
-    pension_benefit = np.float64(
-        income_tax_rate
-        * wage_rate
-        * aggregate_labor_in
-        / np.sum(mass[age_retire - 1 :])
+    (interest_rate, wage_rate, pension_benefit) = get_factor_prices(
+        aggregate_capital_in,
+        aggregate_labor_in,
+        alpha,
+        delta_k,
+        income_tax_rate,
+        mass,
+        age_retire,
     )
 
     # Display equilibrium results
@@ -299,7 +283,7 @@ def solve_stationary(model_specs):
 
 if __name__ == "__main__":
 
-    model_name = "initial"  # sys.argv[1]
+    model_name = sys.argv[1]
     model_specs = json.load(
         open(ppj("IN_MODEL_SPECS", f"stationary_{model_name}.json"), encoding="utf-8")
     )

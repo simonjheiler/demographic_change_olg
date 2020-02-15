@@ -9,7 +9,7 @@ from bld.project_paths import project_paths_join as ppj
 from src.model_code.aggregate import aggregate_hc_readable as aggregate_hc
 from src.model_code.solve import solve_retired
 from src.model_code.solve import solve_working
-
+from src.model_code.within_period import get_factor_prices
 
 #####################################################
 # PARAMETERS
@@ -86,13 +86,22 @@ def solve_transition(
     # Load initial steady state
     aggregate_capital_initial = results_initial["aggregate_capital_in"]
     aggregate_labor_initial = results_initial["aggregate_labor_in"]
-    income_tax_rate_initial = results_initial["income_tax_rate"]
     mass_distribution_full_working_init = results_initial[
         "mass_distribution_full_working"
     ]
     mass_distribution_full_retired_init = results_initial[
         "mass_distribution_full_retired"
     ]
+
+    # Load initial and final income tax rate
+    model_specs_initial = json.load(
+        open(ppj("IN_MODEL_SPECS", "stationary_initial.json"), encoding="utf-8")
+    )
+    income_tax_rate_initial = model_specs_initial["income_tax_rate"]
+    model_specs_final = json.load(
+        open(ppj("IN_MODEL_SPECS", "stationary_final.json"), encoding="utf-8")
+    )
+    income_tax_rate_final = model_specs_final["income_tax_rate"]
 
     # Basic parameters
     duration_transition = transition_params["duration_transition"]
@@ -104,16 +113,16 @@ def solve_transition(
     reform = 0
 
     # # Initial guesses on the paths of K and L
-    aggregate_capital_in = np.zeros((duration_transition, 1), dtype=np.float64)
-    aggregate_labor_in = np.zeros((duration_transition, 1), dtype=np.float64)
+    aggregate_capital_in = np.zeros((duration_transition + 1), dtype=np.float64)
+    aggregate_labor_in = np.zeros((duration_transition + 1), dtype=np.float64)
 
     # Check whether we can use the paths for K and L from previously run executions
     try:
-        with open(ppj("OUT_ANALYSIS", "stationary_initial.pickle"), "wb") as out_file:
-            results_transition = pickle.load(None, out_file)
-        duration_transition_aux = results_transition["duration_transition"]
-        aggregate_capital_aux = results_transition["aggregate_capital"]
-        aggregate_labor_aux = results_transition["aggregate_labor"]
+        with open(ppj("OUT_ANALYSIS", "transition.pickle"), "rb") as in_file:
+            results_transition_aux = pickle.load(in_file)
+        duration_transition_aux = len(results_transition_aux["aggregate_capital_in"])
+        aggregate_capital_aux = results_transition_aux["aggregate_capital_in"]
+        aggregate_labor_aux = results_transition_aux["aggregate_labor"]
         # Need to be careful because previously duration_transition could have been different
         if (
             duration_transition_aux > duration_transition
@@ -125,39 +134,24 @@ def solve_transition(
             duration_transition_aux < duration_transition
         ):  # If T_old < duration_transition, then take the full vectors and fill the remaining
             # elements with the last available value
-            aggregate_capital_in[:duration_transition_aux] = aggregate_capital_aux[
-                :duration_transition_aux
-            ]
+            aggregate_capital_in[:duration_transition_aux] = aggregate_capital_aux
             aggregate_capital_in[duration_transition_aux:] = np.repeat(
-                aggregate_capital_aux[duration_transition_aux],
-                duration_transition - duration_transition_aux,
-                1,
+                aggregate_capital_aux[-1], duration_transition - duration_transition_aux
             )
-            aggregate_labor_in[:duration_transition_aux] = aggregate_labor_aux[
-                :duration_transition_aux
-            ]
+            aggregate_labor_in[:duration_transition_aux] = aggregate_labor_aux
             aggregate_labor_in[:duration_transition_aux] = np.repeat(
-                aggregate_labor_aux[duration_transition_aux],
-                duration_transition - duration_transition_aux,
-                1,
+                aggregate_labor_aux[-1], duration_transition - duration_transition_aux,
             )
         else:
-            aggregate_capital = aggregate_capital_aux
-            aggregate_labor = aggregate_labor_aux
+            aggregate_capital_in = aggregate_capital_aux
+            aggregate_labor_in = aggregate_labor_aux
     except FileNotFoundError:
-        for time_idx in range(duration_transition + 1):
-            aggregate_capital_in[time_idx] = aggregate_capital_initial + (
-                aggregate_capital_final - aggregate_capital_initial
-            ) / duration_transition * (time_idx - 1)
-            aggregate_labor_in[time_idx] = aggregate_labor_initial + (
-                aggregate_labor_final - aggregate_labor_initial
-            ) / duration_transition * (time_idx - 1)
-
-    aggregate_capital[1] = aggregate_capital_initial
-    aggregate_labor[-1] = aggregate_labor_final
-
-    aggregate_capitalnew = aggregate_capital
-    aggregate_labornew = aggregate_labor
+        aggregate_capital_in = np.linspace(
+            aggregate_capital_initial, aggregate_capital_final, duration_transition + 1,
+        )
+        aggregate_labor_in = np.linspace(
+            aggregate_labor_initial, aggregate_labor_final, duration_transition + 1,
+        )
 
     ################################################################
     # Loop over capital and labor
@@ -165,25 +159,47 @@ def solve_transition(
 
     # Initialize objects for iteration
     value_retired = np.zeros(
-        (n_gridpoints_capital, duration_retired, duration_transition), dtype=np.float64
+        (n_gridpoints_capital, duration_retired, duration_transition + 1),
+        dtype=np.float64,
     )
     value_working = np.zeros(
-        (n_gridpoints_capital, n_gridpoints_hc, duration_working, duration_transition),
+        (
+            n_gridpoints_capital,
+            n_gridpoints_hc,
+            duration_working,
+            duration_transition + 1,
+        ),
         dtype=np.float64,
     )
     policy_capital_retired = np.zeros(
-        (n_gridpoints_capital, duration_retired, duration_transition), dtype=np.int32
+        (n_gridpoints_capital, duration_retired, duration_transition + 1),
+        dtype=np.int32,
     )
     policy_capital_working = np.zeros(
-        (n_gridpoints_capital, n_gridpoints_hc, duration_working, duration_transition),
+        (
+            n_gridpoints_capital,
+            n_gridpoints_hc,
+            duration_working,
+            duration_transition + 1,
+        ),
         dtype=np.int32,
     )
     policy_hc_working = np.zeros(
-        (n_gridpoints_capital, n_gridpoints_hc, duration_working, duration_transition),
+        (
+            n_gridpoints_capital,
+            n_gridpoints_hc,
+            duration_working,
+            duration_transition + 1,
+        ),
         dtype=np.int32,
     )
     policy_labor_working = np.zeros(
-        (n_gridpoints_hc, n_gridpoints_capital, duration_retired, duration_transition),
+        (
+            n_gridpoints_capital,
+            n_gridpoints_hc,
+            duration_working,
+            duration_transition + 1,
+        ),
         dtype=np.float64,
     )
 
@@ -195,16 +211,18 @@ def solve_transition(
     policy_hc_working[:, :, :, -1] = policy_hc_working_final
     policy_labor_working[:, :, :, -1] = policy_labor_working_final
 
-    aggregate_capital_out = np.zeros((duration_transition, 1), dtype=np.float64)
-    aggregate_labor_out = np.zeros((duration_transition, 1), dtype=np.float64)
+    aggregate_capital_out = np.zeros((duration_transition + 1), dtype=np.float64)
+    aggregate_labor_out = np.zeros((duration_transition + 1), dtype=np.float64)
 
     # Construct policy rate path
-    income_tax_rate = np.zeros((duration_transition, 1), dtype=np.float64)
+    income_tax_rate = np.zeros((duration_transition + 1), dtype=np.float64)
 
     if reform == 0:
-        income_tax_rate[1] = income_tax_rate_initial
+        income_tax_rate[0] = income_tax_rate_initial
+        income_tax_rate[1:] = income_tax_rate_final
     else:
-        income_tax_rate[1:20] = income_tax_rate_initial
+        income_tax_rate[0:19] = income_tax_rate_initial
+        income_tax_rate[20:] = income_tax_rate_final
 
     # Initialize iteration
     num_iterations_outer = 0
@@ -224,30 +242,17 @@ def solve_transition(
 
         print(f"Iteration {num_iterations_outer} out of {max_iterations_outer}")
 
-        for time_idx in range(duration_transition - 2, -1, -1):
-
-            # Load aggregate variables and policy variables
-            income_tax_rate = income_tax_rate[time_idx]
-            aggregate_capital_in = aggregate_capital[time_idx]
-            aggregate_labor_in = aggregate_labor[time_idx]
+        for time_idx in range(duration_transition - 1, -1, -1):
 
             # Calculate factor prices from aggregates
-            interest_rate = np.float64(
-                alpha
-                * (aggregate_capital_in ** (alpha - 1))
-                * (aggregate_labor_in ** (1 - alpha))
-                - delta_k
-            )
-            wage_rate = np.float64(
-                (1 - alpha)
-                * (aggregate_capital_in ** alpha)
-                * (aggregate_labor_in ** (-alpha))
-            )
-            pension_benefit = np.float64(
-                income_tax_rate
-                * wage_rate
-                * aggregate_labor_in
-                / np.sum(mass[age_retire - 1 :])
+            (interest_rate, wage_rate, pension_benefit) = get_factor_prices(
+                aggregate_capital=aggregate_capital_in[time_idx],
+                aggregate_labor=aggregate_labor_in[time_idx],
+                alpha=alpha,
+                delta_k=delta_k,
+                income_tax_rate=income_tax_rate[time_idx],
+                mass=mass[:, time_idx],
+                age_retire=age_retire,
             )
 
             ############################################################
@@ -294,7 +299,7 @@ def solve_transition(
                     neg=neg,
                     continuation_value=continuation_value,
                     n_gridpoints_capital=n_gridpoints_capital,
-                    survival_rate=survival_rates[age_idx],
+                    survival_rate=survival_rates[age_idx, time_idx],
                     policy_capital_retired_tmp=n_gridpoints_hc,
                     value_retired_tmp=value_retired_tmp,
                 )
@@ -364,7 +369,7 @@ def solve_transition(
                     hc_next_period=hc_next_period,
                     interest_rate=interest_rate,
                     wage_rate=wage_rate,
-                    income_tax_rate=income_tax_rate,
+                    income_tax_rate=income_tax_rate[time_idx],
                     beta=beta,
                     gamma=gamma,
                     sigma=sigma,
@@ -376,7 +381,7 @@ def solve_transition(
                     n_gridpoints_capital=n_gridpoints_capital,
                     n_gridpoints_hc=n_gridpoints_hc,
                     efficiency=np.float64(efficiency[age_idx]),
-                    survival_rate=survival_rates[age_idx],
+                    survival_rate=survival_rates[age_idx, time_idx],
                     policy_capital_working_tmp=policy_capital_working_tmp,
                     policy_hc_working_tmp=policy_hc_working_tmp,
                     policy_labor_working_tmp=policy_labor_working_tmp,
@@ -439,12 +444,12 @@ def solve_transition(
             mass_distribution_full_retired = mass_distribution_full_retired_tmp
 
         # Display results
-        deviation_capital = max(abs(aggregate_capitalnew - aggregate_capital))
-        deviation_labor = max(abs(aggregate_labornew - aggregate_labor))
+        deviation_capital = max(abs(aggregate_capital_in - aggregate_capital_out))
+        deviation_labor = max(abs(aggregate_labor_in - aggregate_labor_out))
 
         # Update the guess on capital and labor
-        aggregate_capital = 0.8 * aggregate_capital + 0.2 * aggregate_capitalnew
-        aggregate_labor = 0.8 * aggregate_labor + 0.2 * aggregate_labornew
+        aggregate_capital_in = 0.8 * aggregate_capital_in + 0.2 * aggregate_capital_out
+        aggregate_labor_in = 0.8 * aggregate_labor_in + 0.2 * aggregate_labor_out
         print("deviation-capital deviation-labor")
         print([deviation_capital, deviation_labor])
 

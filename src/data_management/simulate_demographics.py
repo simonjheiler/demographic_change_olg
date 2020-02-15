@@ -22,7 +22,7 @@ age_min = np.int32(params_general["age_min"])
 with open(ppj("IN_MODEL_SPECS", "transition.json")) as json_file:
     params_transition = json.load(json_file)
 
-transition_duration = np.int32(params_transition["transition_duration"])
+duration_transition = np.int32(params_transition["duration_transition"])
 
 
 #####################################################
@@ -35,15 +35,16 @@ def extrapolate_survival():
     # Read in raw data
     survival_rates_raw = np.squeeze(
         np.array(
-            pd.read_csv(ppj("IN_DATA", "survival_rates_raw.csv")).values, dtype=float
+            pd.read_csv(ppj("IN_DATA", "survival_rates_raw_test.csv")).values,
+            dtype=float,
         )
     )
 
     # Adjustment factors to be changed for simulated change in survival probabilities
-    adjustment = np.ones((age_max, transition_duration), dtype=np.float64)
+    adjustment = np.ones((age_max, duration_transition), dtype=np.float64)
 
     # Initiate object to store simulated survival probabilities
-    survival_rates_sim = np.ones((age_max, transition_duration), dtype=np.float64)
+    survival_rates_sim = np.ones((age_max, duration_transition), dtype=np.float64)
 
     # Initial survival probabilities are empirical data
     survival_rates_sim[: age_max - 1, 0] = survival_rates_raw[
@@ -54,7 +55,7 @@ def extrapolate_survival():
     survival_rates_sim[-1, 0] = 0.0
 
     # Simulate over transition period by iterating over adjustment factors
-    for time_idx in range(1, transition_duration):
+    for time_idx in range(1, duration_transition):
         survival_rates_sim[:, time_idx] = (
             survival_rates_sim[:, time_idx - 1] * adjustment[:, time_idx]
         )
@@ -72,16 +73,16 @@ def extrapolate_fertility():
     )
 
     # Adjustment factors to be changed for simulated change in survival probabilities
-    adjustment = np.ones(transition_duration, dtype=np.float64)
+    adjustment = np.ones(duration_transition, dtype=np.float64)
 
     # Initiate object to store simulated survival probabilities
-    fertility_rates_sim = np.ones(transition_duration, dtype=np.float64)
+    fertility_rates_sim = np.ones(duration_transition, dtype=np.float64)
 
     # Initial fertility rate is empirical data
     fertility_rates_sim[0] = fertility_rates_in
 
     # Simulate over transition period by iterating over adjustment factors
-    for time_idx in range(1, transition_duration):
+    for time_idx in range(1, duration_transition):
         fertility_rates_sim[time_idx] = (
             fertility_rates_sim[time_idx - 1] * adjustment[time_idx]
         )
@@ -92,7 +93,7 @@ def extrapolate_fertility():
 def simulate_mass(fertility_rates, survival_rates):
 
     # Initialize object to store mass distribution
-    mass_sim = np.ones((age_max, transition_duration), dtype=np.float64)
+    mass_sim = np.ones((age_max, duration_transition), dtype=np.float64)
 
     # Simulate mass starting with mass 1 agents of age zero at time zero
     mass_sim[0, 0] = 1.0
@@ -106,7 +107,7 @@ def simulate_mass(fertility_rates, survival_rates):
         )
     # Simulate mass distribution throughout modelling horizon by iterating over
     # simulated fertility and survival rates
-    for time_idx in range(1, transition_duration):
+    for time_idx in range(1, duration_transition):
         mass_sim[0, time_idx] = (
             mass_sim[0, time_idx - 1] * fertility_rates[time_idx - 1]
         )

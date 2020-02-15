@@ -1,4 +1,5 @@
 import numba as nb
+import numpy as np
 
 
 #########################################################################
@@ -203,3 +204,27 @@ def get_hc_effort(hc_this_period, hc_next_period, zeta, psi, delta_hc):
     )
 
     return hc_effort
+
+
+@nb.njit
+def get_factor_prices(
+    aggregate_capital,
+    aggregate_labor,
+    alpha,
+    delta_k,
+    income_tax_rate,
+    mass,
+    age_retire,
+):
+    interest_rate = np.float64(
+        alpha * (aggregate_capital ** (alpha - 1)) * (aggregate_labor ** (1 - alpha))
+        - delta_k
+    )
+    wage_rate = np.float64(
+        (1 - alpha) * (aggregate_capital ** alpha) * (aggregate_labor ** (-alpha))
+    )
+    pension_benefit = np.float64(
+        income_tax_rate * wage_rate * aggregate_labor / np.sum(mass[age_retire - 1 :])
+    )
+
+    return interest_rate, wage_rate, pension_benefit
