@@ -16,10 +16,7 @@ def build(ctx):
                 ctx.path_to(ctx, "IN_MODEL_CODE", "aggregate.py"),
                 ctx.path_to(ctx, "IN_MODEL_SPECS", f"stationary_{model}.json"),
             ],
-            target=[
-                ctx.path_to(ctx, "OUT_ANALYSIS", f"stationary_{model}.pickle"),
-                ctx.path_to(ctx, "OUT_ANALYSIS", "log", f"stationary_{model}.log"),
-            ],
+            target=ctx.path_to(ctx, "OUT_ANALYSIS", f"stationary_{model}.pickle"),
             append=model,
             name=f"stationary_{model}",
         )

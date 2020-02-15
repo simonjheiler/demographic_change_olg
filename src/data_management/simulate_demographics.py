@@ -13,11 +13,13 @@ from bld.project_paths import project_paths_join as ppj
 # PARAMETERS
 ######################################################
 
-with open(ppj("IN_MODEL_SPECS", "setup.json")) as json_file:
+with open(ppj("IN_MODEL_SPECS", "transition.json")) as json_file:
     params = json.load(json_file)
 
 population_growth_rate = np.float64(params["population_growth_rate"])
 transition_duration = np.int32(params["transition_duration"])
+
+age_max = 66
 
 
 #####################################################
@@ -42,6 +44,18 @@ def extrapolate_fertility():
     fertility_rates = np.full((transition_duration), population_growth_rate)
 
     return fertility_rates
+
+
+def simulate_mass():
+    # Measure of each generation
+    mass = np.ones((age_max, 1), dtype=np.float64)
+    for j in range(1, age_max):
+        mass[j] = mass[j - 1] / (1 + population_growth_rate)
+
+    # Normalized measure of each generation (sum up to 1)
+    mass = mass / sum(mass)
+
+    return mass
 
 
 def save_data(sample_1, sample_2):

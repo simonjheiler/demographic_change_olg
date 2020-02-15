@@ -1,4 +1,24 @@
 {
-  "transition_duration": 30,
-  "population_growth_rate": 0.011
+  "beta": 0.97,
+  "sigma": 2.0,
+  "alpha": 0.36,
+  "delta_k": 0.06,
+  "age_max": 66,
+  "age_retire": 46,
+  "delta_hc": 0.008,
+  "psi": 0.65,
+  "zeta": 0.16,
+  "gamma": 1.0,
+  "capital_min": 0.001,
+  "capital_max": 30.0,
+  "n_gridpoints_capital": 10,
+  "capital_init": 0.0,
+  "hc_min": 0.5,
+  "hc_max": 2.0,
+  "n_gridpoints_hc": 2,
+  "hc_init": 0.5,
+  "tolerance_capital": 0.0001,
+  "tolerance_labor": 0.0001,
+  "max_iterations_inner": 3,
+  "max_iterations_outer": 2
 }

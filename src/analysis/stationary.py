@@ -15,6 +15,59 @@ from src.model_code.solve import solve_by_backward_induction_hc_vectorized as so
 
 
 #####################################################
+# PARAMETERS
+######################################################
+
+# Load general parameters
+setup = json.load(open(ppj("IN_MODEL_SPECS", "setup.json"), encoding="utf-8"))
+alpha = np.float64(setup["alpha"])
+beta = np.float64(setup["beta"])
+gamma = np.float64(setup["gamma"])
+delta_k = np.float64(setup["delta_k"])
+delta_hc = np.float64(setup["delta_hc"])
+sigma = np.float64(setup["sigma"])
+psi = np.float64(setup["psi"])
+zeta = np.float64(setup["zeta"])
+age_max = np.int32(setup["age_max"])
+age_retire = np.int32(setup["age_retire"])
+capital_min = np.float64(setup["capital_min"])
+capital_max = np.float64(setup["capital_max"])
+n_gridpoints_capital = np.int32(setup["n_gridpoints_capital"])
+capital_init = np.float64(setup["capital_init"])
+hc_min = np.float64(setup["hc_min"])
+hc_max = np.float64(setup["hc_max"])
+n_gridpoints_hc = np.int32(setup["n_gridpoints_hc"])
+hc_init = np.float64(setup["hc_init"])
+tolerance_capital = np.float64(setup["tolerance_capital"])
+tolerance_labor = np.float64(setup["tolerance_labor"])
+max_iterations_inner = np.int32(setup["max_iterations_inner"])
+
+# Load demographic parameters
+efficiency = np.squeeze(
+    np.array(
+        pd.read_csv(ppj("IN_DATA", "efficiency_multiplier.csv")).values,
+        dtype=np.float64,
+    )
+)
+fertility_rates = np.array(
+    pd.read_csv(ppj("OUT_DATA", "fertility_rates.csv")).values, dtype=np.float64
+)
+survival_rates_all = np.array(
+    pd.read_csv(ppj("OUT_DATA", "survival_rates.csv")).values, dtype=np.float64
+)
+mass_all = np.array(
+    pd.read_csv(ppj("OUT_DATA", "mass_distribution.csv")).values, dtype=np.float64
+)
+
+# Calculate derived parameters
+capital_grid = np.linspace(
+    capital_min, capital_max, n_gridpoints_capital, dtype=np.float64
+)
+hc_grid = np.linspace(hc_min, hc_max, n_gridpoints_hc, dtype=np.float64)
+duration_retired = age_max - age_retire + 1
+duration_working = age_retire - 1
+
+#####################################################
 # FUNCTIONS
 ######################################################
 
@@ -22,80 +75,30 @@ from src.model_code.solve import solve_by_backward_induction_hc_vectorized as so
 def solve_stationary(model_specs):
 
     # Load model specifications
-    params = model_specs
-
-    setup_name = params["setup_name"]
-    alpha = np.float64(params["alpha"])
-    beta = np.float64(params["beta"])
-    sigma = np.float64(params["sigma"])
-    age_max = np.int32(params["age_max"])
-    age_retire = np.int32(params["age_retire"])
-    zeta = np.float64(params["zeta"])
-    psi = np.float64(params["psi"])
-    delta_k = np.float64(params["delta_k"])
-    delta_hc = np.float64(params["delta_hc"])
-    capital_min = np.float64(params["capital_min"])
-    capital_max = np.float64(params["capital_max"])
-    n_gridpoints_capital = np.int32(params["n_gridpoints_capital"])
-    hc_min = np.float64(params["hc_min"])
-    hc_max = np.float64(params["hc_max"])
-    n_gridpoints_hc = np.int32(params["n_gridpoints_hc"])
-    hc_init = np.float64(params["hc_init"])
-    income_tax_rate = np.float64(params["income_tax_rate"])
-    aggregate_capital_in = np.float64(params["aggregate_capital_init"])
-    aggregate_labor_in = np.float64(params["aggregate_labor_init"])
-    gamma = np.float64(params["gamma"])
-    tolerance_capital = np.float64(params["tolerance_capital"])
-    tolerance_labor = np.float64(params["tolerance_labor"])
-    max_iterations_inner = np.int32(params["max_iterations_inner"])
-
-    # Load demographic parameters
-    efficiency = np.squeeze(
-        np.array(
-            pd.read_csv(ppj("IN_DATA", "efficiency_multiplier.csv")).values,
-            dtype=np.float64,
-        )
-    )
-
-    fertility_rates = np.array(
-        pd.read_csv(ppj("OUT_DATA", "fertility_rates.csv")).values, dtype=np.float64
-    )
-    survival_rates = np.array(
-        pd.read_csv(ppj("OUT_DATA", "survival_rates.csv")).values, dtype=np.float64
-    )
+    setup_name = model_specs["setup_name"]
 
     if setup_name == "initial":
-        population_growth_rate = fertility_rates[0]
-        survival_rates = survival_rates[:, -1]
+        time_idx = 0
     elif setup_name == "final":
-        population_growth_rate = fertility_rates[-1]
-        survival_rates = survival_rates[:, -1]
+        time_idx = -1
 
-    # calculate derived parameters
-    capital_grid = np.linspace(
-        capital_min, capital_max, n_gridpoints_capital, dtype=np.float64
-    )
-    hc_grid = np.linspace(hc_min, hc_max, n_gridpoints_hc, dtype=np.float64)
-    duration_retired = age_max - age_retire + 1
-    duration_working = age_retire - 1
+    population_growth_rate = fertility_rates[time_idx]
+    survival_rates = survival_rates_all[:, time_idx]
+    mass = mass_all[:, time_idx]
 
-    # Measure of each generation
-    mass = np.ones((age_max, 1), dtype=np.float64)
-    for j in range(1, age_max):
-        mass[j] = mass[j - 1] / (1 + population_growth_rate)
+    aggregate_capital_in = model_specs["aggregate_capital_init"]
+    aggregate_labor_in = model_specs["aggregate_labor_init"]
+    income_tax_rate = model_specs["income_tax_rate"]
 
-    # Normalized measure of each generation (sum up to 1)
-    mass = mass / sum(mass)
-
+    ################################################################
+    # Loop over capital, labor and pension benefits
+    ################################################################
+    # Initialize iteration
     num_iterations_inner = 0  # Counter for iterations
 
     aggregate_capital_out = aggregate_capital_in + 10
     aggregate_labor_out = aggregate_labor_in + 10
     neg = np.float64(-1e10)  # very small number
-
-    ################################################################
-    # Loop over capital, labor and pension benefits
-    ################################################################
 
     while (num_iterations_inner < max_iterations_inner) and (
         (abs(aggregate_capital_out - aggregate_capital_in) > tolerance_capital)
@@ -261,6 +264,7 @@ def solve_stationary(model_specs):
         mass_distribution_full_working, mass_distribution_full_retired
     )
     income = reshape_as_vector(income_working, income_retired)
+
     # Calculate Gini coefficient
     gini_index, _, _ = gini(mass_distribution, income)
     print(f"gini_index = {gini_index}")
@@ -278,6 +282,7 @@ def solve_stationary(model_specs):
         "mass_distribution_full_working": mass_distribution_full_working,
         "mass_distribution_full_retired": mass_distribution_full_retired,
         "average_hours_worked": hours,
+        "gini_coefficient": gini,
     }
 
     return results
@@ -289,11 +294,12 @@ def solve_stationary(model_specs):
 
 
 if __name__ == "__main__":
+
     model_name = sys.argv[1]
     model_specs = json.load(
         open(ppj("IN_MODEL_SPECS", f"stationary_{model_name}.json"), encoding="utf-8")
     )
-    results = solve_stationary(model_specs)
+    results = solve_stationary(model_name)
 
     with open(ppj("OUT_ANALYSIS", f"stationary_{model_name}.pickle"), "wb") as out_file:
         pickle.dump(results, out_file)
