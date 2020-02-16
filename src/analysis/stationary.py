@@ -1,3 +1,8 @@
+"""
+Solve for a stationary equilibrium of an overlapping generations model
+with human capital accumulation adopted from Ludwig, Schelkle, Vogel (2006).
+
+"""
 import json
 import pickle
 import sys
