@@ -3,21 +3,44 @@
 
 def build(ctx):
 
-    for model in "baseline", "max_moves_2":
-
-        # Illustrate use of run_py_script with automatic model specification.
+    # Solve for initial and final stationary equilibrium
+    for model in ["initial", "final"]:
         ctx(
             features="run_py_script",
-            source="schelling.py",
+            source="stationary.py",
             deps=[
-                ctx.path_to(ctx, "OUT_DATA", "initial_locations.csv"),
-                ctx.path_to(ctx, "IN_MODEL_CODE", "agent.py"),
-                ctx.path_to(ctx, "IN_MODEL_SPECS", f"{model}.json"),
+                ctx.path_to(ctx, "IN_DATA", "efficiency_multiplier.csv"),
+                ctx.path_to(ctx, "OUT_DATA", "fertility_rates.csv"),
+                ctx.path_to(ctx, "OUT_DATA", "survival_rates.csv"),
+                ctx.path_to(ctx, "OUT_DATA", "mass_distribution.csv"),
+                ctx.path_to(ctx, "IN_MODEL_CODE", "solve.py"),
+                ctx.path_to(ctx, "IN_MODEL_CODE", "aggregate.py"),
+                ctx.path_to(ctx, "IN_MODEL_SPECS", "setup_general.json"),
+                ctx.path_to(ctx, "IN_MODEL_SPECS", f"stationary_{model}.json"),
             ],
-            target=[
-                ctx.path_to(ctx, "OUT_ANALYSIS", f"schelling_{model}.pickle"),
-                ctx.path_to(ctx, "OUT_ANALYSIS", "log", f"schelling_{model}.log"),
-            ],
-            append=model,
-            name=f"schelling_{model}",
+            target=ctx.path_to(ctx, "OUT_ANALYSIS", f"stationary_{model}.pickle"),
+            append=f"{model} stationary equilibrium",
+            name=f"stationary_{model}",
         )
+
+    # Solve for transition dynamics
+    ctx(
+        features="run_py_script",
+        source="transition.py",
+        deps=[
+            ctx.path_to(ctx, "IN_DATA", "efficiency_multiplier.csv"),
+            ctx.path_to(ctx, "OUT_DATA", "fertility_rates.csv"),
+            ctx.path_to(ctx, "OUT_DATA", "survival_rates.csv"),
+            ctx.path_to(ctx, "OUT_DATA", "mass_distribution.csv"),
+            ctx.path_to(ctx, "IN_MODEL_CODE", "solve.py"),
+            ctx.path_to(ctx, "IN_MODEL_CODE", "aggregate.py"),
+            ctx.path_to(ctx, "IN_MODEL_SPECS", "setup_general.json"),
+            ctx.path_to(ctx, "IN_MODEL_SPECS", "stationary_initial.json"),
+            ctx.path_to(ctx, "IN_MODEL_SPECS", "stationary_final.json"),
+            ctx.path_to(ctx, "IN_MODEL_SPECS", "transition_constant_tax_rate.json"),
+            ctx.path_to(ctx, "OUT_ANALYSIS", "stationary_initial.pickle"),
+            ctx.path_to(ctx, "OUT_ANALYSIS", "stationary_final.pickle"),
+        ],
+        target=ctx.path_to(ctx, "OUT_ANALYSIS", "transition.pickle"),
+        name="transition",
+    )

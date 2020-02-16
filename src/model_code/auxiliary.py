@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def gini(pop, val, makeplot=False):
+def gini(pop, val, make_plot=False):
     """ GINI computes the Gini coefficient and the Lorentz curve.
 
     Usage:
@@ -90,7 +90,7 @@ def gini(pop, val, makeplot=False):
         gini_coefficient = np.nan
         lorentz_rel = np.nan(1, 4)
         lorentz_abs = np.nan(1, 4)
-        return
+        return gini_coefficient, lorentz_rel, lorentz_abs
 
     assert np.all(pop >= 0) and np.all(
         val >= 0
@@ -123,7 +123,7 @@ def gini(pop, val, makeplot=False):
     # Lorentz curve
     lorentz_rel = [rel_pop, rel_z]
     lorentz_abs = [pop, z]
-    if makeplot:
+    if make_plot:
         # area(relpop, relz, 'FaceColor', [0.5, 0.5, 1.0])  # the Lorentz curve
         # plot([0, 1], [0, 1], '--k')  # 45 degree line
         # axis tight  # ranges of abscissa and ordinate are by definition exactly [0,1]
@@ -138,47 +138,110 @@ def gini(pop, val, makeplot=False):
     return gini_coefficient, lorentz_rel, lorentz_abs
 
 
-def reshape_as_vector(
-    in_working, in_retired, n_prod_states, age_max, age_retire, n_gridpoints_capital,
-):
+def reshape_as_vector(in_1, in_2):
     """ Cast input matrices in single vector for function "gini".
 
     Arguments
     ---------
-        in_working: np.array(n_productivity_states, duration_working, n_gridpoints_capital)
+        in_1: np.array(n_gridpoints_dim_1, n_gridpoints_dim_2, length_1)
             Input for working age agents
-        in_retired: np.array(duration_retired, n_gridpoints_capital)
+        in_2: np.array(n_gridpoints_dim_1, length_2)
             Input for retired agents
-        n_prod_states: int
-            Number of idiosyncratic productivity states
-        age_max: int
-            Maximum age of agents
-        age_retire: int
-            Retirement age
-        n_gridpoints_capital: int
-            Number of grid points of capital grid
     Returns
     -------
         out: np.array(np.prod(in_1.shape) + np.prod(in_2.shape))
             Combined input in vector shape
     """
-    out = np.zeros(
-        (
-            ((n_prod_states - 1) * age_retire + age_max - (n_prod_states - 1))
-            * n_gridpoints_capital,
-            1,
-        )
-    )
-    out[
-        : (n_prod_states * (age_retire - 1) * n_gridpoints_capital)
-    ] = in_working.reshape(
-        ((n_prod_states * (age_retire - 1) * n_gridpoints_capital), 1), order="F",
-    )
-    out[
-        (n_prod_states * (age_retire - 1) * n_gridpoints_capital) :
-    ] = in_retired.reshape(
-        ((age_max - age_retire + 1) * n_gridpoints_capital, 1), order="F"
-    )
-    out = np.squeeze(out)
+    out = np.zeros(np.prod(in_1.shape) + np.prod(in_2.shape))
+    out[: np.prod(in_1.shape)] = in_1.reshape((np.prod(in_1.shape)), order="F")
+    out[np.prod(in_1.shape) :] = in_2.reshape((np.prod(in_2.shape)), order="F")
 
     return out
+
+
+def get_average_hours_worked(policy, mass_distribution):
+    """ Compute average hours worked from labor input policy and mass distribution of
+        working age households.
+
+        ...
+
+    Arguments
+    ---------
+        policy: np.array(n_gridpoints_dim_1, n_gridpoints_dim_2, length_1)
+            Labor input policy function
+        mass_distribution: np.array(n_gridpoints_dim_1, n_gridpoints_dim_2, length_1)
+            Mass distribution of working age households
+    Returns
+    -------
+        out: np.array(length)
+            Average hours worked by age
+    """
+    hours = np.multiply(policy, mass_distribution)
+    hours_by_age = np.sum(np.sum(hours, axis=1), axis=0)
+    hours_average = hours_by_age / np.sum(np.sum(mass_distribution, axis=1), axis=0)
+
+    return hours_average
+
+
+def get_income(
+    interest_rate,
+    capital_grid,
+    pension_benefit,
+    duration_retired,
+    n_gridpoints_capital,
+    duration_working,
+    n_gridpoints_hc,
+    hc_grid,
+    efficiency,
+    policy_labor_working,
+):
+    """ Compute household income during working age and during retirement.
+
+        ...
+
+    Arguments
+    ---------
+        interest_rate: ---
+            ...
+        capital_grid: ---
+            ...
+        pension_benefit: ---
+            ...
+        duration_retired: ---
+            ...
+        n_gridpoints_capital: ---
+            ...
+        duration_working: ---
+            ...
+        n_gridpoints_hc: ---
+            ...
+        hc_grid: ---
+            ...
+        efficiency: ---
+            ...
+        policy_labor_working: ---
+            ...
+    Returns
+    -------
+        income_retired: np.array(n_gridpoints_capital, duration_retired)
+            Total household income during retirement by current asset level and age
+        income_working: np.array(n_gridpoints_capital, n_gridpoints_hc, duration_working)
+            Total household income during working age by current assets, current human capital
+            level and age
+    """
+    # Repeat retirement income for all ages in retirement period
+    income_retired = interest_rate * capital_grid + pension_benefit
+    income_retired = np.repeat(income_retired[:, np.newaxis], duration_retired, axis=1)
+
+    # Calculate working age income from states and labor input policy
+    assets_this_period, hc_this_period = np.meshgrid(capital_grid, hc_grid)
+    income_working = np.zeros((n_gridpoints_capital, n_gridpoints_hc, duration_working))
+
+    for age_idx in range(duration_working):
+        labor_input = policy_labor_working[:, :, age_idx].T
+        income_working[:, :, age_idx] = (
+            interest_rate * assets_this_period
+            + hc_this_period * efficiency[age_idx] * labor_input
+        ).T
+
+    return income_retired, income_working

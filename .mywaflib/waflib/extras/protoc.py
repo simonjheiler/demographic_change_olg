@@ -31,7 +31,7 @@ Example for Python:
     def build(bld):
         bld(
                 features = 'py'
-                source   = 'main.py file1.proto proto/file2.proto',
+                source   = 'stationary.py file1.proto proto/file2.proto',
                 protoc_includes  = 'proto')
 
 Example for both Python and C++ at same time:

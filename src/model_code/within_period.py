@@ -1,8 +1,14 @@
 import numba as nb
+import numpy as np
+
+
+#########################################################################
+# STANDARD MODEL WITH IDIOSYNCRATIC RISK AND NO HUMAN CAPITAL
+#########################################################################
 
 
 @nb.njit
-def get_labor_input(
+def get_labor_input_baseline(
     assets_this_period,
     assets_next_period,
     interest_rate,
@@ -37,15 +43,21 @@ def get_labor_input(
         labor_input: np.float64
             Optimal hours worked
     """
-    labor_input = (
-        gamma * (1 - income_tax_rate) * productivity * efficiency * wage_rate
-        - (1 - gamma) * ((1 + interest_rate) * assets_this_period - assets_next_period)
-    ) / ((1 - income_tax_rate) * productivity * efficiency * wage_rate)
+    if efficiency == 0.0:
+        labor_input = 0.0
+    elif gamma == 1.0:
+        labor_input = 1.0
+    else:
+        labor_input = (
+            gamma * (1.0 - income_tax_rate) * productivity * efficiency * wage_rate
+            - (1.0 - gamma)
+            * ((1.0 + interest_rate) * assets_this_period - assets_next_period)
+        ) / ((1.0 - income_tax_rate) * productivity * efficiency * wage_rate)
 
-    if labor_input > 1:
-        labor_input = 1
-    elif labor_input < 0:
-        labor_input = 0
+    if labor_input > 1.0:
+        labor_input = 1.0
+    elif labor_input < 0.0:
+        labor_input = 0.0
 
     return labor_input
 
@@ -81,7 +93,7 @@ def get_consumption(
         income_tax_rate: np.float64
             Tax rate on labor income
         productivity: np.float64
-            Current idiosyncratic productivity state
+            Current idiosyncratic productivity state or level of human capital
         efficiency: np.float64
             Age-dependent labor efficiency multiplier
     Returns
@@ -127,6 +139,11 @@ def util(consumption, labor_input, hc_effort, gamma, sigma):
     return flow_utility
 
 
+#########################################################################
+# ADAPTED MODEL WITHOUT IDIOSYNCRATIC RISK AND WITH HUMAN CAPITAL
+#########################################################################
+
+
 @nb.njit
 def hc_accumulation(hc_this_period, hc_effort, zeta, psi, delta_hc):
     """ Calculate new (post-investment and depreciation) level of human capital.
@@ -156,3 +173,58 @@ def hc_accumulation(hc_this_period, hc_effort, zeta, psi, delta_hc):
     )
 
     return hc_next_period
+
+
+@nb.njit
+def get_hc_effort(hc_this_period, hc_next_period, zeta, psi, delta_hc):
+    """ Calculate (implied) effort invested in human capital accumulation.
+
+    Human capital formation technology taken from Ludwig, Schelkle, Vogel (2012),
+    adopted rom Ben-Porath (1967).
+
+    Arguments
+    ---------
+        hc_this_period: np.float64
+            Current level of human capital
+        hc_next_period: np.float64
+            Future level of human capital
+        zeta: np.float64
+            Scaling factor (average learning ability)
+        psi: np.float64
+            Curvature parameter of hc formation technology
+        delta_hc: np.float64
+            Depreciation rate on human capital
+    Returns
+    -------
+        hc_effort: np.float64
+            Effort invested in human capital accumulation
+    """
+    hc_effort = zeta ** (-1) * (hc_next_period - hc_this_period * (1 - delta_hc)) ** (
+        1 / psi
+    )
+
+    return hc_effort
+
+
+@nb.njit
+def get_factor_prices(
+    aggregate_capital,
+    aggregate_labor,
+    alpha,
+    delta_k,
+    income_tax_rate,
+    mass,
+    age_retire,
+):
+    interest_rate = np.float64(
+        alpha * (aggregate_capital ** (alpha - 1)) * (aggregate_labor ** (1 - alpha))
+        - delta_k
+    )
+    wage_rate = np.float64(
+        (1 - alpha) * (aggregate_capital ** alpha) * (aggregate_labor ** (-alpha))
+    )
+    pension_benefit = np.float64(
+        income_tax_rate * wage_rate * aggregate_labor / np.sum(mass[age_retire - 1 :])
+    )
+
+    return interest_rate, wage_rate, pension_benefit

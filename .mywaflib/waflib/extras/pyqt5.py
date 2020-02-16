@@ -17,7 +17,7 @@ The following snippet illustrates the tool usage::
 	def build(bld):
 		bld(
 			features = 'py pyqt5',
-			source   = 'main.py textures.qrc aboutDialog.ui',
+			source   = 'stationary.py textures.qrc aboutDialog.ui',
 		)
 
 Here, the UI description and resource files will be processed
