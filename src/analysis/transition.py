@@ -10,7 +10,7 @@ import pickle
 import numpy as np
 
 from bld.project_paths import project_paths_join as ppj
-from src.model_code.aggregate import aggregate_hc_readable as aggregate_hc
+from src.model_code.aggregate import aggregate_hc_readable_step as aggregate_hc_step
 from src.model_code.solve import solve_retired
 from src.model_code.solve import solve_working
 from src.model_code.within_period import get_factor_prices
@@ -33,7 +33,7 @@ age_retire = np.int32(setup["age_retire"])
 capital_min = np.float64(setup["capital_min"])
 capital_max = np.float64(setup["capital_max"])
 n_gridpoints_capital = np.int32(setup["n_gridpoints_capital"])
-capital_init = np.float64(setup["capital_init"])
+assets_init = np.float64(setup["assets_init"])
 hc_min = np.float64(setup["hc_min"])
 hc_max = np.float64(setup["hc_max"])
 n_gridpoints_hc = np.int32(setup["n_gridpoints_hc"])
@@ -42,6 +42,7 @@ tolerance_capital = np.float64(setup["tolerance_capital"])
 tolerance_labor = np.float64(setup["tolerance_labor"])
 max_iterations_inner = np.int32(setup["max_iterations_inner"])
 max_iterations_outer = np.int32(setup["max_iterations_outer"])
+iteration_update_outer = np.float64(setup["iteration_update_outer"])
 
 # Load demographic parameters
 efficiency = np.loadtxt(
@@ -63,6 +64,10 @@ capital_grid = np.linspace(
     capital_min, capital_max, n_gridpoints_capital, dtype=np.float64
 )
 hc_grid = np.linspace(hc_min, hc_max, n_gridpoints_hc, dtype=np.float64)
+
+assets_init_idx = (np.abs(capital_grid - assets_init)).argmin()
+hc_init_idx = (np.abs(hc_grid - hc_init)).argmin()
+
 duration_retired = age_max - age_retire + 1
 duration_working = age_retire - 1
 
@@ -135,12 +140,12 @@ def solve_transition(
             duration_transition_aux < duration_transition
         ):  # If T_old < duration_transition, then take the full vectors and fill the remaining
             # elements with the last available value
-            aggregate_capital_in[:duration_transition_aux] = aggregate_capital_aux
-            aggregate_capital_in[duration_transition_aux:] = np.repeat(
+            aggregate_capital_in[: duration_transition_aux + 1] = aggregate_capital_aux
+            aggregate_capital_in[duration_transition_aux + 1 :] = np.repeat(
                 aggregate_capital_aux[-1], duration_transition - duration_transition_aux
             )
-            aggregate_labor_in[:duration_transition_aux] = aggregate_labor_aux
-            aggregate_labor_in[:duration_transition_aux] = np.repeat(
+            aggregate_labor_in[: duration_transition_aux + 1] = aggregate_labor_aux
+            aggregate_labor_in[duration_transition_aux + 1 :] = np.repeat(
                 aggregate_labor_aux[-1], duration_transition - duration_transition_aux,
             )
         else:
@@ -154,8 +159,24 @@ def solve_transition(
             aggregate_labor_initial, aggregate_labor_final, duration_transition + 1,
         )
 
+    # Construct policy rate path
+    income_tax_rate = np.zeros((duration_transition + 1), dtype=np.float64)
+
+    if reform == 0:
+        income_tax_rate[0] = income_tax_rate_initial
+        income_tax_rate[1:] = income_tax_rate_final
+    else:
+        income_tax_rate[0:19] = income_tax_rate_initial
+        income_tax_rate[20:] = income_tax_rate_final
+
+    # Initialize iteration
+    num_iterations_outer = 0
+    deviation_capital = 10
+    deviation_labor = 10
+    neg = np.float64(-1e10)
+
     ################################################################
-    # Loop over capital and labor
+    # Loop over path for capital, labor and pension benefits
     ################################################################
 
     # Initialize objects for iteration
@@ -204,6 +225,22 @@ def solve_transition(
         dtype=np.float64,
     )
 
+    # Initiate objects to store temporary policy and value functions
+    policy_capital_retired_tmp = np.zeros(n_gridpoints_capital, dtype=np.int32)
+    value_retired_tmp = np.zeros(n_gridpoints_capital, dtype=np.float64)
+    policy_capital_working_tmp = np.zeros(
+        (n_gridpoints_capital, n_gridpoints_hc), dtype=np.int32
+    )
+    policy_hc_working_tmp = np.zeros(
+        (n_gridpoints_capital, n_gridpoints_hc), dtype=np.int32
+    )
+    policy_labor_working_tmp = np.zeros(
+        (n_gridpoints_capital, n_gridpoints_hc), dtype=np.float64
+    )
+    value_working_tmp = np.zeros(
+        (n_gridpoints_capital, n_gridpoints_hc), dtype=np.float64
+    )
+
     # Store final steady state values and policies as last period in transition duration
     value_retired[:, :, -1] = value_retired_final
     value_working[:, :, :, -1] = value_working_final
@@ -212,29 +249,23 @@ def solve_transition(
     policy_hc_working[:, :, :, -1] = policy_hc_working_final
     policy_labor_working[:, :, :, -1] = policy_labor_working_final
 
+    # Initializations
+    mass_distribution_full_working = np.zeros(
+        (n_gridpoints_capital, n_gridpoints_hc, duration_working, duration_transition,),
+        dtype=np.float64,
+    )
+    mass_distribution_full_retired = np.zeros(
+        (n_gridpoints_capital, duration_retired, duration_transition), dtype=np.float64,
+    )
+
+    # Initial distribution is stationary distribution of initial equilibrium
+    mass_distribution_full_working[:, :, :, 0] = mass_distribution_full_working_init
+    mass_distribution_full_retired[:, :, 0] = mass_distribution_full_retired_init
+
     aggregate_capital_out = np.zeros((duration_transition + 1), dtype=np.float64)
     aggregate_labor_out = np.zeros((duration_transition + 1), dtype=np.float64)
 
-    # Construct policy rate path
-    income_tax_rate = np.zeros((duration_transition + 1), dtype=np.float64)
-
-    if reform == 0:
-        income_tax_rate[0] = income_tax_rate_initial
-        income_tax_rate[1:] = income_tax_rate_final
-    else:
-        income_tax_rate[0:19] = income_tax_rate_initial
-        income_tax_rate[20:] = income_tax_rate_final
-
-    # Initialize iteration
-    num_iterations_outer = 0
-    deviation_capital = 10
-    deviation_labor = 10
-    neg = np.float64(-1e10)
-
-    ################################################################
-    # Loop over path for capital, labor and pension benefits
-    ################################################################
-
+    # Iterate
     while (num_iterations_outer < max_iterations_outer) and (
         (abs(deviation_capital) > tolerance_capital)
         or (abs(deviation_labor) > tolerance_labor)
@@ -245,20 +276,26 @@ def solve_transition(
 
         for time_idx in range(duration_transition - 1, -1, -1):
 
-            # Calculate factor prices from aggregates
-            (interest_rate, wage_rate, pension_benefit) = get_factor_prices(
-                aggregate_capital=aggregate_capital_in[time_idx],
-                aggregate_labor=aggregate_labor_in[time_idx],
-                alpha=alpha,
-                delta_k=delta_k,
-                income_tax_rate=income_tax_rate[time_idx],
-                mass=mass[:, time_idx],
-                age_retire=age_retire,
-            )
+            # Load aggregate variables
+            aggregate_capital_tmp = aggregate_capital_in[time_idx]
+            aggregate_labor_tmp = aggregate_labor_in[time_idx]
+            income_tax_rate_tmp = income_tax_rate[time_idx]
+            mass_tmp = mass[:, time_idx]
 
             # Load next period value functions
             value_retired_current = value_retired[:, :, time_idx + 1]
             value_working_current = value_working[:, :, :, time_idx + 1]
+
+            # Calculate factor prices from aggregates
+            (interest_rate, wage_rate, pension_benefit) = get_factor_prices(
+                aggregate_capital=aggregate_capital_tmp,
+                aggregate_labor=aggregate_labor_tmp,
+                alpha=alpha,
+                delta_k=delta_k,
+                income_tax_rate=income_tax_rate_tmp,
+                mass=mass_tmp,
+                age_retire=age_retire,
+            )
 
             ############################################################
             # BACKWARD INDUCTION
@@ -277,10 +314,6 @@ def solve_transition(
             assets_next_period, assets_this_period = np.meshgrid(
                 capital_grid, capital_grid
             )
-
-            # Initiate objects to store temporary policy and value functions
-            policy_capital_retired_tmp = np.zeros(n_gridpoints_capital, dtype=np.int32)
-            value_retired_tmp = np.zeros(n_gridpoints_capital, dtype=np.float64)
 
             # Iterate backwards through retirement period
             for age_idx in range(duration_retired - 2, -1, -1):
@@ -325,20 +358,6 @@ def solve_transition(
                 hc_this_period,
                 hc_next_period,
             ) = np.meshgrid(capital_grid, capital_grid, hc_grid, hc_grid,)
-
-            # Initiate objects to store temporary policy and value functions
-            policy_capital_working_tmp = np.zeros(
-                (n_gridpoints_capital, n_gridpoints_hc), dtype=np.int32
-            )
-            policy_hc_working_tmp = np.zeros(
-                (n_gridpoints_capital, n_gridpoints_hc), dtype=np.int32
-            )
-            policy_labor_working_tmp = np.zeros(
-                (n_gridpoints_capital, n_gridpoints_hc), dtype=np.float64
-            )
-            value_working_tmp = np.zeros(
-                (n_gridpoints_capital, n_gridpoints_hc), dtype=np.float64
-            )
 
             # Iterate backwards through working period
             for age_idx in range(duration_working - 1, -1, -1):
@@ -405,37 +424,25 @@ def solve_transition(
         # Iterating over the distribution
         ############################################################################
 
-        # Initializations
-        mass_distribution_full_working = np.zeros(
-            (
-                n_gridpoints_capital,
-                n_gridpoints_hc,
-                duration_working,
-                duration_transition,
-            ),
-            dtype=np.float64,
-        )
-        mass_distribution_full_retired = np.zeros(
-            (n_gridpoints_capital, duration_retired, duration_transition),
-            dtype=np.float64,
-        )
-
-        # Initial distribution is stationary distribution of initial equilibrium
-        mass_distribution_full_working[:, :, :, 0] = mass_distribution_full_working_init
-        mass_distribution_full_retired[:, :, 0] = mass_distribution_full_retired_init
-
         for time_idx in range(duration_transition - 1):
 
             # Load current demographic parameters
             population_growth_rate_current = fertility_rates[time_idx] - 1
             survival_rates_current = survival_rates[:, time_idx]
-            mass_current = mass[:, time_idx]
 
             # Load current policy functions
             policy_capital_retired_current = policy_capital_retired[:, :, time_idx]
             policy_capital_working_current = policy_capital_working[:, :, :, time_idx]
             policy_hc_working_current = policy_hc_working[:, :, :, time_idx]
             policy_labor_working_current = policy_labor_working[:, :, :, time_idx]
+
+            # Load current mass distribution
+            mass_distribution_full_working_in = mass_distribution_full_working[
+                :, :, :, time_idx
+            ]
+            mass_distribution_full_retired_in = mass_distribution_full_retired[
+                :, :, time_idx
+            ]
 
             ############################################################################
             # Aggregate capital stock and employment
@@ -446,7 +453,9 @@ def solve_transition(
                 aggregate_labor_out_tmp,
                 mass_distribution_full_working_tmp,
                 mass_distribution_full_retired_tmp,
-            ) = aggregate_hc(
+            ) = aggregate_hc_step(
+                mass_distribution_full_working_in=mass_distribution_full_working_in,
+                mass_distribution_full_retired_in=mass_distribution_full_retired_in,
                 policy_capital_working=policy_capital_working_current,
                 policy_hc_working=policy_hc_working_current,
                 policy_labor_working=policy_labor_working_current,
@@ -454,25 +463,27 @@ def solve_transition(
                 age_max=age_max,
                 age_retire=age_retire,
                 n_gridpoints_capital=n_gridpoints_capital,
-                hc_init=hc_init,
                 capital_grid=capital_grid,
                 n_gridpoints_hc=n_gridpoints_hc,
                 hc_grid=hc_grid,
-                mass=mass_current,
+                assets_init_idx=assets_init_idx,
+                hc_init_idx=hc_init_idx,
                 population_growth_rate=population_growth_rate_current,
                 survival_rates=survival_rates_current,
                 efficiency=efficiency,
             )
 
             # Store results
-            aggregate_capital_out[time_idx + 1] = aggregate_capital_out_tmp
+            aggregate_capital_out[time_idx + 1] = (
+                1 + interest_rate
+            ) * aggregate_capital_out_tmp
             aggregate_labor_out[time_idx] = aggregate_labor_out_tmp
 
             mass_distribution_full_working[
-                :, :, :, time_idx
+                :, :, :, time_idx + 1
             ] = mass_distribution_full_working_tmp
             mass_distribution_full_retired[
-                :, :, time_idx
+                :, :, time_idx + 1
             ] = mass_distribution_full_retired_tmp
 
         # Display results
@@ -480,8 +491,13 @@ def solve_transition(
         deviation_labor = max(abs(aggregate_labor_in - aggregate_labor_out))
 
         # Update the guess on capital and labor
-        aggregate_capital_in = 0.8 * aggregate_capital_in + 0.2 * aggregate_capital_out
-        aggregate_labor_in = 0.8 * aggregate_labor_in + 0.2 * aggregate_labor_out
+        aggregate_capital_in = (
+            1 - iteration_update_outer
+        ) * aggregate_capital_in + iteration_update_outer * aggregate_capital_out
+        aggregate_labor_in = (
+            1 - iteration_update_outer
+        ) * aggregate_labor_in + iteration_update_outer * aggregate_labor_out
+
         print("deviation-capital deviation-labor")
         print([deviation_capital, deviation_labor])
 

@@ -13,7 +13,7 @@
   "capital_min": 0.001,
   "capital_max": 30.0,
   "n_gridpoints_capital": 100,
-  "capital_init": 0.0,
+  "assets_init": 0.0,
   "hc_min": 0.5,
   "hc_max": 0.5,
   "n_gridpoints_hc": 1,
@@ -21,5 +21,7 @@
   "tolerance_capital": 0.0001,
   "tolerance_labor": 0.0001,
   "max_iterations_inner": 50,
-  "max_iterations_outer": 2
+  "max_iterations_outer": 10,
+  "iteration_update_inner": 0.05,
+  "iteration_update_outer": 0.2
 }

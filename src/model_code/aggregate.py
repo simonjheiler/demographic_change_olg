@@ -48,8 +48,8 @@ def aggregate_baseline_readable(
             Initial distribution of idiosyncratic productivity states
         transition_prod_states: np.array(n_prod_states, n_prod_states)
             Transition probabilities for idiosyncratic productivity states
-        efficiency: np.array(age_retire)
-            Profile of age-dependent labor efficiency multipliers
+        efficiency: np.array(age_max)
+            Vector of age-dependent labor efficiency multipliers
         capital_grid: np.array(n_gridpoints_capital)
             Asset grid
         mass: np.array(age_max, 1)
@@ -237,10 +237,11 @@ def aggregate_hc_readable(
     age_max,
     age_retire,
     n_gridpoints_capital,
-    hc_init,
     capital_grid,
     n_gridpoints_hc,
     hc_grid,
+    assets_init_idx,
+    hc_init_idx,
     mass,
     population_growth_rate,
     survival_rates,
@@ -267,20 +268,25 @@ def aggregate_hc_readable(
             Retirement age of agents
         n_gridpoints_capital: np.int32
             Number of grid points of capital grid
-        hc_init: np.float64
-            Initial level of human capital
         capital_grid: np.array(n_gridpoints_capital)
             Asset grid
         n_gridpoints_hc: np.int32
             Number of grid points of human capital grid
         hc_grid: np.array(n_gridpoints_capital)
             Human capital grid
+        assets_init_idx: np.int32
+            Index of initial asset level on capital grid
+        hc_init_idx: np.int32
+            Index of initial human capital level on hc grid
         mass: np.array(age_max, 1)
             Vector of relative shares of agents by age
         population_growth_rate: np.float64
             Annual population growth rate
         survival_rates: np.array(age_max)
             Vector of conditional year-to-year survival rates
+        efficiency: np.array(age_max)
+            Vector of age-dependent labor efficiency multipliers
+
     Returns
     -------
         aggregate_capital_out: np.float64
@@ -314,7 +320,10 @@ def aggregate_hc_readable(
     )
 
     # make sure that all agents start with  correct initial level, i.e. hc = 1 and assets = 0
-    mass_distribution_full_working[0, 0, 0] = mass[0]
+    mass_distribution_full_working[assets_init_idx, hc_init_idx, 0] = mass[0]
+
+    # mass_distribution_full_working_in = mass_distribution_full_working
+    # mass_distribution_full_retired_in = mass_distribution_full_retired
 
     ############################################################################
     # Iterating over the distribution
@@ -406,7 +415,10 @@ def aggregate_hc_readable(
     )
 
 
-def aggregate_hc_vectorized(
+# @nb.njit
+def aggregate_hc_readable_step(
+    mass_distribution_full_working_in,
+    mass_distribution_full_retired_in,
     policy_capital_working,
     policy_hc_working,
     policy_labor_working,
@@ -414,13 +426,14 @@ def aggregate_hc_vectorized(
     age_max,
     age_retire,
     n_gridpoints_capital,
-    hc_init,
     capital_grid,
     n_gridpoints_hc,
     hc_grid,
-    mass,
+    assets_init_idx,
+    hc_init_idx,
     population_growth_rate,
     survival_rates,
+    efficiency,
 ):
     """ Calculate aggregate variables and cross-sectional distribution from HH policy functions.
 
@@ -443,34 +456,34 @@ def aggregate_hc_vectorized(
             Retirement age of agents
         n_gridpoints_capital: np.int32
             Number of grid points of capital grid
-        hc_init: np.float64
-            Initial level of human capital
         capital_grid: np.array(n_gridpoints_capital)
             Asset grid
         n_gridpoints_hc: np.int32
             Number of grid points of human capital grid
         hc_grid: np.array(n_gridpoints_capital)
             Human capital grid
-        mass: np.array(age_max, 1)
-            Vector of relative shares of agents by age
+        assets_init_idx: np.int32
+            Index of initial asset level on capital grid
+        hc_init_idx: np.int32
+            Index of initial human capital level on hc grid
         population_growth_rate: np.float64
-            Annual population growth rate
+            Growth rate of newborns from current period to next period
         survival_rates: np.array(age_max)
             Vector of conditional year-to-year survival rates
+        efficiency: np.array(age_max)
+            Vector of age-dependent labor efficiency multipliers
     Returns
     -------
         aggregate_capital_out: np.float64
-            Aggregate capital stock derived from household policy functions and
-            cross-sectional distribution
+            Current period aggregate savings (pre interest payment)
         aggregate_labor_out: np.float64
-            Aggregate labor supply derived from household policy functions and
-            cross-sectional distribution
-        mass_distribution_full: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
-            Distribution of agents by asset holdings, human capital level and age
-        mass_distribution_capital: np.array(n_gridpoints_capital, age_max)
-            Distribution of agents by asset holdings and age
-        mass_distribution_hc: np.array(n_gridpoints_hc, age_max)
-            Distribution of agents by human capital level and age
+            Current period aggregate labor supply
+        mass_distribution_full_working_out: np.array(n_gridpoints_capital, n_gridpoints_hc,
+            age_max)
+            Next periods distribution of working age agents by asset holdings, human capital
+            level and age
+        mass_distribution_full_retired_out: np.array(n_gridpoints_capital, age_max)
+            Next periods distribution of retired agents by asset holdings and age
     """
     # Initialize objects for forward iteration
     duration_retired = age_max - age_retire + 1  # length of retirement
@@ -482,74 +495,77 @@ def aggregate_hc_vectorized(
     labor_distribution_age = np.zeros(age_max, dtype=np.float64)
 
     # Distributions of agents
-    mass_distribution_full_working = np.zeros(
+    mass_distribution_full_working_out = np.zeros(
         (n_gridpoints_capital, n_gridpoints_hc, duration_working), dtype=np.float64,
     )
-    mass_distribution_full_retired = np.zeros(
+    mass_distribution_full_retired_out = np.zeros(
         (n_gridpoints_capital, duration_retired), dtype=np.float64
     )
 
-    # make sure that all agents start with  correct initial level, i.e. hc = 1 and assets = 0
-    mass_distribution_full_working[0, 0, 0] = mass[0]
+    # Store mass of newborn agents at initial node
+    mass_distribution_full_working_out[
+        assets_init_idx, hc_init_idx, 0
+    ] = mass_distribution_full_working_in[assets_init_idx, hc_init_idx, 0] * (
+        1 + population_growth_rate
+    )
 
     ############################################################################
     # Iterating over the distribution
     ############################################################################
     # Workers
-    mass_distribution_full_next_period = np.zeros(
-        (n_gridpoints_capital, n_gridpoints_hc), dtype=np.float64
-    )
-
     for age_idx in range(duration_working):
-
-        for assets_next_period_idx in range(n_gridpoints_capital):
-            for hc_next_period_idx in range(n_gridpoints_hc):
-                mass_distribution_full_next_period[
-                    assets_next_period_idx, hc_next_period_idx
-                ] = np.sum(
-                    np.where(
-                        np.logical_and(
-                            policy_capital_working[:, :, age_idx]
-                            == assets_next_period_idx,
-                            policy_hc_working[:, :, age_idx] == hc_next_period_idx,
-                        ),
-                        mass_distribution_full_working[:, :, age_idx],
-                        0.0,
-                    )
-                )
-
-        if age_idx < duration_working - 1:
-            mass_distribution_full_working[:, :, age_idx + 1] = (
-                mass_distribution_full_next_period
-                / (1 + population_growth_rate)
-                * survival_rates[age_idx]
-            )
-        elif age_idx == duration_working - 1:
-            mass_distribution_full_retired[:, 0] = (
-                np.sum(mass_distribution_full_next_period, axis=1)
-                / (1 + population_growth_rate)
-                * survival_rates[age_idx]
-            )
-
         for assets_this_period_idx in range(n_gridpoints_capital):
             for hc_this_period_idx in range(n_gridpoints_hc):
+
+                assets_next_period_idx = policy_capital_working[
+                    assets_this_period_idx, hc_this_period_idx, age_idx
+                ]
+                hc_next_period_idx = policy_hc_working[
+                    assets_this_period_idx, hc_this_period_idx, age_idx
+                ]
+
+                if age_idx < duration_working - 1:
+                    mass_distribution_full_working_out[
+                        assets_next_period_idx, hc_next_period_idx, age_idx + 1
+                    ] += (
+                        mass_distribution_full_working_in[
+                            assets_this_period_idx, hc_this_period_idx, age_idx
+                        ]
+                        * survival_rates[age_idx]
+                    )
+                elif age_idx == duration_working - 1:
+                    mass_distribution_full_retired_out[assets_next_period_idx, 0] += (
+                        mass_distribution_full_working_in[
+                            assets_this_period_idx, hc_this_period_idx, age_idx
+                        ]
+                        * survival_rates[age_idx]
+                    )
+
                 labor_distribution_age[age_idx] += (
                     policy_labor_working[
                         assets_this_period_idx, hc_this_period_idx, age_idx
                     ]
                     * hc_grid[hc_this_period_idx]
-                    * mass_distribution_full_working[
+                    * efficiency[age_idx]
+                    * mass_distribution_full_working_in[
                         assets_this_period_idx, hc_this_period_idx, age_idx
                     ]
                 )
 
         # Aggregate variables
-        asset_distribution_age[age_idx] = np.dot(
-            capital_grid, np.sum(mass_distribution_full_working, axis=1)[:, age_idx]
-        )
-        hc_distribution_age[age_idx] = np.dot(
-            hc_grid, np.sum(mass_distribution_full_working, axis=0)[:, age_idx]
-        )
+        if age_idx < duration_working - 1:
+            asset_distribution_age[age_idx + 1] = np.dot(
+                capital_grid,
+                np.sum(mass_distribution_full_working_out, axis=1)[:, age_idx + 1],
+            )
+            hc_distribution_age[age_idx + 1] = np.dot(
+                hc_grid,
+                np.sum(mass_distribution_full_working_out, axis=0)[:, age_idx + 1],
+            )
+        elif age_idx == duration_working - 1:
+            asset_distribution_age[age_idx + 1] = np.dot(
+                capital_grid, mass_distribution_full_retired_out[:, 0]
+            )
 
     # Retirees
     for age_idx in range(duration_retired - 1):
@@ -558,15 +574,14 @@ def aggregate_hc_vectorized(
             assets_next_period_idx = policy_capital_retired[
                 assets_this_period_idx, age_idx
             ]
-            mass_distribution_full_retired[assets_next_period_idx, age_idx + 1] += (
-                mass_distribution_full_retired[assets_this_period_idx, age_idx]
-                / (1 + population_growth_rate)
+            mass_distribution_full_retired_out[assets_next_period_idx, age_idx + 1] += (
+                mass_distribution_full_retired_in[assets_this_period_idx, age_idx]
                 * survival_rates[age_idx]
             )
 
         # Aggregate assets and human capital
         asset_distribution_age[duration_working + age_idx + 1] = np.dot(
-            capital_grid, mass_distribution_full_retired[:, age_idx + 1]
+            capital_grid, mass_distribution_full_retired_out[:, age_idx + 1]
         )
 
     aggregate_capital_out = np.sum(asset_distribution_age)
@@ -575,6 +590,6 @@ def aggregate_hc_vectorized(
     return (
         aggregate_capital_out,
         aggregate_labor_out,
-        mass_distribution_full_working,
-        mass_distribution_full_retired,
+        mass_distribution_full_working_out,
+        mass_distribution_full_retired_out,
     )
