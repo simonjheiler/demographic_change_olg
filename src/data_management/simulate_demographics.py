@@ -4,7 +4,6 @@
 import json
 
 import numpy as np
-import pandas as pd
 
 from bld.project_paths import project_paths_join as ppj
 
@@ -13,13 +12,13 @@ from bld.project_paths import project_paths_join as ppj
 # PARAMETERS
 ######################################################
 
-with open(ppj("IN_MODEL_SPECS", "setup.json")) as json_file:
+with open(ppj("IN_MODEL_SPECS", "setup_general.json")) as json_file:
     params_general = json.load(json_file)
 
 age_max = np.int32(params_general["age_max"])
 age_min = np.int32(params_general["age_min"])
 
-with open(ppj("IN_MODEL_SPECS", "transition.json")) as json_file:
+with open(ppj("IN_MODEL_SPECS", "transition_constant_tax_rate.json")) as json_file:
     params_transition = json.load(json_file)
 
 duration_transition = np.int32(params_transition["duration_transition"])
@@ -33,11 +32,8 @@ duration_transition = np.int32(params_transition["duration_transition"])
 def extrapolate_survival():
 
     # Read in raw data
-    survival_rates_raw = np.squeeze(
-        np.array(
-            pd.read_csv(ppj("IN_DATA", "survival_rates_raw_test.csv")).values,
-            dtype=float,
-        )
+    survival_rates_raw = np.loadtxt(
+        ppj("IN_DATA", "survival_rates_raw_test.csv"), delimiter=",", dtype=np.float64,
     )
 
     # Adjustment factors to be changed for simulated change in survival probabilities
@@ -66,17 +62,15 @@ def extrapolate_survival():
 def extrapolate_fertility():
 
     # Read in raw data
-    fertility_rates_in = np.squeeze(
-        np.array(
-            pd.read_csv(ppj("IN_DATA", "fertility_rates_raw.csv")).values, dtype=float
-        )
+    fertility_rates_in = np.loadtxt(
+        ppj("IN_DATA", "fertility_rates_raw.csv"), delimiter=",", dtype=np.float64,
     )
 
     # Adjustment factors to be changed for simulated change in survival probabilities
     adjustment = np.ones(duration_transition, dtype=np.float64)
 
     # Initiate object to store simulated survival probabilities
-    fertility_rates_sim = np.ones(duration_transition, dtype=np.float64)
+    fertility_rates_sim = np.ones(duration_transition + 1, dtype=np.float64)
 
     # Initial fertility rate is empirical data
     fertility_rates_sim[0] = fertility_rates_in
