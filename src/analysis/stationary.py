@@ -1,9 +1,8 @@
-import json  # noqa:F401
-import pickle  # noqa:F401
-import sys  # noqa:F401
+import json
+import pickle
+import sys
 
-import numpy as np  # noqa:F401
-import pandas as pd  # noqa:F401
+import numpy as np
 
 from bld.project_paths import project_paths_join as ppj
 from src.model_code.aggregate import aggregate_hc_readable as aggregate_hc
@@ -19,7 +18,7 @@ from src.model_code.within_period import get_factor_prices
 ######################################################
 
 # Load general parameters
-setup = json.load(open(ppj("IN_MODEL_SPECS", "setup.json"), encoding="utf-8"))
+setup = json.load(open(ppj("IN_MODEL_SPECS", "setup_general.json"), encoding="utf-8"))
 alpha = np.float64(setup["alpha"])
 beta = np.float64(setup["beta"])
 gamma = np.float64(setup["gamma"])
