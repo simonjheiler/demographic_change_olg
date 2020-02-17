@@ -40,7 +40,7 @@ def plot_dependency_ratio(mass_distribution):
     ax.set(
         xlabel="time index",
         ylabel="old-age dependency ratio",
-        ybound=[0, 0.4],
+        ybound=[0, 0.6],
         title="Old-age dependency ratio over time",
     )
 
