@@ -9,6 +9,9 @@ def build(ctx):
         deps=[
             ctx.path_to(ctx, "IN_DATA", "survival_rates_raw.csv"),
             ctx.path_to(ctx, "IN_DATA", "fertility_rates_raw.csv"),
+            ctx.path_to(ctx, "IN_MODEL_SPECS", "setup_general.json"),
+            ctx.path_to(ctx, "IN_MODEL_SPECS", "transition_constant_tax_rate.json"),
+            ctx.path_to(ctx, "IN_MODEL_SPECS", "transition_constant_rep_rate.json"),
         ],
         target=[
             ctx.path_to(ctx, "OUT_DATA", "fertility_rates.csv"),

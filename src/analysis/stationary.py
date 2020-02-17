@@ -37,7 +37,7 @@ age_retire = np.int32(setup["age_retire"])
 capital_min = np.float64(setup["capital_min"])
 capital_max = np.float64(setup["capital_max"])
 n_gridpoints_capital = np.int32(setup["n_gridpoints_capital"])
-capital_init = np.float64(setup["capital_init"])
+assets_init = np.float64(setup["assets_init"])
 hc_min = np.float64(setup["hc_min"])
 hc_max = np.float64(setup["hc_max"])
 n_gridpoints_hc = np.int32(setup["n_gridpoints_hc"])
@@ -45,6 +45,7 @@ hc_init = np.float64(setup["hc_init"])
 tolerance_capital = np.float64(setup["tolerance_capital"])
 tolerance_labor = np.float64(setup["tolerance_labor"])
 max_iterations_inner = np.int32(setup["max_iterations_inner"])
+iteration_update_inner = np.float64(setup["iteration_update_inner"])
 
 # Load demographic parameters
 efficiency = np.loadtxt(
@@ -65,6 +66,9 @@ capital_grid = np.linspace(
     capital_min, capital_max, n_gridpoints_capital, dtype=np.float64
 )
 hc_grid = np.linspace(hc_min, hc_max, n_gridpoints_hc, dtype=np.float64)
+assets_init_idx = (np.abs(capital_grid - assets_init)).argmin()
+hc_init_idx = (np.abs(hc_grid - hc_init)).argmin()
+
 duration_retired = age_max - age_retire + 1
 duration_working = age_retire - 1
 
@@ -170,10 +174,11 @@ def solve_stationary(model_specs):
             age_max=age_max,
             age_retire=age_retire,
             n_gridpoints_capital=n_gridpoints_capital,
-            hc_init=hc_init,
             capital_grid=capital_grid,
             n_gridpoints_hc=n_gridpoints_hc,
             hc_grid=hc_grid,
+            assets_init_idx=assets_init_idx,
+            hc_init_idx=hc_init_idx,
             mass=mass,
             population_growth_rate=population_growth_rate,
             survival_rates=survival_rates,
@@ -182,9 +187,11 @@ def solve_stationary(model_specs):
 
         # Update the guess on capital and labor
         aggregate_capital_in = (
-            0.95 * aggregate_capital_in + 0.05 * aggregate_capital_out
-        )
-        aggregate_labor_in = 0.95 * aggregate_labor_in + 0.05 * aggregate_labor_out
+            1 - iteration_update_inner
+        ) * aggregate_capital_in + iteration_update_inner * aggregate_capital_out
+        aggregate_labor_in = (
+            1 - iteration_update_inner
+        ) * aggregate_labor_in + iteration_update_inner * aggregate_labor_out
 
         # Display results
         print("capital | labor | pension ")
@@ -288,6 +295,8 @@ def solve_stationary(model_specs):
 if __name__ == "__main__":
 
     model_name = sys.argv[1]
+    # model_name = "initial"
+
     model_specs = json.load(
         open(ppj("IN_MODEL_SPECS", f"stationary_{model_name}.json"), encoding="utf-8")
     )
