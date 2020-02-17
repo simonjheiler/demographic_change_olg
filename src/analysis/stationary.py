@@ -295,6 +295,8 @@ def solve_stationary(model_specs):
 if __name__ == "__main__":
 
     model_name = sys.argv[1]
+    # model_name = "initial"
+
     model_specs = json.load(
         open(ppj("IN_MODEL_SPECS", f"stationary_{model_name}.json"), encoding="utf-8")
     )

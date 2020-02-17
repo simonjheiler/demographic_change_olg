@@ -251,11 +251,17 @@ def solve_transition(
 
     # Initializations
     mass_distribution_full_working = np.zeros(
-        (n_gridpoints_capital, n_gridpoints_hc, duration_working, duration_transition,),
+        (
+            n_gridpoints_capital,
+            n_gridpoints_hc,
+            duration_working,
+            duration_transition + 1,
+        ),
         dtype=np.float64,
     )
     mass_distribution_full_retired = np.zeros(
-        (n_gridpoints_capital, duration_retired, duration_transition), dtype=np.float64,
+        (n_gridpoints_capital, duration_retired, duration_transition + 1),
+        dtype=np.float64,
     )
 
     # Initial distribution is stationary distribution of initial equilibrium
@@ -264,6 +270,7 @@ def solve_transition(
 
     aggregate_capital_out = np.zeros((duration_transition + 1), dtype=np.float64)
     aggregate_labor_out = np.zeros((duration_transition + 1), dtype=np.float64)
+    aggregate_capital_out[0] = aggregate_capital_in[0]
 
     # Iterate
     while (num_iterations_outer < max_iterations_outer) and (
@@ -424,7 +431,7 @@ def solve_transition(
         # Iterating over the distribution
         ############################################################################
 
-        for time_idx in range(duration_transition - 1):
+        for time_idx in range(duration_transition):
 
             # Load current demographic parameters
             population_growth_rate_current = fertility_rates[time_idx] - 1
@@ -474,9 +481,7 @@ def solve_transition(
             )
 
             # Store results
-            aggregate_capital_out[time_idx + 1] = (
-                1 + interest_rate
-            ) * aggregate_capital_out_tmp
+            aggregate_capital_out[time_idx + 1] = aggregate_capital_out_tmp
             aggregate_labor_out[time_idx] = aggregate_labor_out_tmp
 
             mass_distribution_full_working[
@@ -487,6 +492,24 @@ def solve_transition(
             ] = mass_distribution_full_retired_tmp
 
         # Display results
+        labor_distribution_age_tmp = np.zeros((age_retire), dtype=np.float64)
+        for age_idx in range(duration_working):
+            for assets_this_period_idx in range(n_gridpoints_capital):
+                for hc_this_period_idx in range(n_gridpoints_hc):
+
+                    labor_distribution_age_tmp[age_idx] += (
+                        policy_labor_working[
+                            assets_this_period_idx, hc_this_period_idx, age_idx, -1
+                        ]
+                        * hc_grid[hc_this_period_idx]
+                        * efficiency[age_idx]
+                        * mass_distribution_full_working[
+                            assets_this_period_idx, hc_this_period_idx, age_idx, -1
+                        ]
+                    )
+
+        aggregate_labor_out[-1] = np.sum(labor_distribution_age_tmp)
+
         deviation_capital = max(abs(aggregate_capital_in - aggregate_capital_out))
         deviation_labor = max(abs(aggregate_labor_in - aggregate_labor_out))
 
