@@ -10,7 +10,8 @@ import pickle
 import numpy as np
 
 from bld.project_paths import project_paths_join as ppj
-from src.model_code.aggregate import aggregate_hc_readable_step as aggregate_hc_step
+from src.model_code.aggregate import aggregate_step
+from src.model_code.auxiliary import set_continuous_point_on_grid
 from src.model_code.solve import solve_retired
 from src.model_code.solve import solve_working
 from src.model_code.within_period import get_factor_prices
@@ -65,8 +66,15 @@ capital_grid = np.linspace(
 )
 hc_grid = np.linspace(hc_min, hc_max, n_gridpoints_hc, dtype=np.float64)
 
-assets_init_idx = (np.abs(capital_grid - assets_init)).argmin()
-hc_init_idx = (np.abs(hc_grid - hc_init)).argmin()
+assets_init_gridpoints = np.zeros(2, dtype=np.int32)
+assets_init_weights = np.zeros(2, dtype=np.float64)
+hc_init_gridpoints = np.zeros(2, dtype=np.int32)
+hc_init_weights = np.zeros(2, dtype=np.float64)
+
+set_continuous_point_on_grid(
+    assets_init, capital_grid, assets_init_gridpoints, assets_init_weights
+)
+set_continuous_point_on_grid(hc_init, hc_grid, hc_init_gridpoints, hc_init_weights)
 
 duration_retired = age_max - age_retire + 1
 duration_working = age_retire - 1
@@ -81,8 +89,8 @@ def solve_transition(
 ):
 
     # Load final steady state
-    aggregate_capital_final = results_final["aggregate_capital_in"]
-    aggregate_labor_final = results_final["aggregate_labor_in"]
+    aggregate_capital_final = results_final["aggregate_capital"]
+    aggregate_labor_final = results_final["aggregate_labor"]
     value_retired_final = results_final["value_retired"]
     value_working_final = results_final["value_working"]
     policy_capital_retired_final = results_final["policy_capital_retired"]
@@ -91,8 +99,8 @@ def solve_transition(
     policy_labor_working_final = results_final["policy_labor_working"]
 
     # Load initial steady state
-    aggregate_capital_initial = results_initial["aggregate_capital_in"]
-    aggregate_labor_initial = results_initial["aggregate_labor_in"]
+    aggregate_capital_initial = results_initial["aggregate_capital"]
+    aggregate_labor_initial = results_initial["aggregate_labor"]
     mass_distribution_full_working_init = results_initial[
         "mass_distribution_full_working"
     ]
@@ -460,7 +468,7 @@ def solve_transition(
                 aggregate_labor_out_tmp,
                 mass_distribution_full_working_tmp,
                 mass_distribution_full_retired_tmp,
-            ) = aggregate_hc_step(
+            ) = aggregate_step(
                 mass_distribution_full_working_in=mass_distribution_full_working_in,
                 mass_distribution_full_retired_in=mass_distribution_full_retired_in,
                 policy_capital_working=policy_capital_working_current,
@@ -473,8 +481,10 @@ def solve_transition(
                 capital_grid=capital_grid,
                 n_gridpoints_hc=n_gridpoints_hc,
                 hc_grid=hc_grid,
-                assets_init_idx=assets_init_idx,
-                hc_init_idx=hc_init_idx,
+                assets_init_gridpoints=assets_init_gridpoints,
+                assets_init_weights=assets_init_weights,
+                hc_init_gridpoints=hc_init_gridpoints,
+                hc_init_weights=hc_init_weights,
                 population_growth_rate=population_growth_rate_current,
                 survival_rates=survival_rates_current,
                 efficiency=efficiency,
@@ -492,7 +502,7 @@ def solve_transition(
             ] = mass_distribution_full_retired_tmp
 
         # Display results
-        labor_distribution_age_tmp = np.zeros((age_retire), dtype=np.float64)
+        labor_distribution_age_tmp = np.zeros(age_retire, dtype=np.float64)
         for age_idx in range(duration_working):
             for assets_this_period_idx in range(n_gridpoints_capital):
                 for hc_this_period_idx in range(n_gridpoints_hc):
@@ -547,7 +557,7 @@ def solve_transition(
 
 if __name__ == "__main__":
 
-    transition_params = json.load(
+    transition_params_model = json.load(
         open(
             ppj("IN_MODEL_SPECS", "transition_constant_tax_rate.json"), encoding="utf-8"
         )
@@ -559,7 +569,7 @@ if __name__ == "__main__":
         results_stationary_final = pickle.load(in_file)
 
     results_transition = solve_transition(
-        results_stationary_initial, results_stationary_final, transition_params
+        results_stationary_initial, results_stationary_final, transition_params_model
     )
 
     with open(ppj("OUT_ANALYSIS", f"transition.pickle"), "wb") as out_file:

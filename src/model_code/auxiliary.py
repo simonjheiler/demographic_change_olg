@@ -1,3 +1,4 @@
+import numba as nb
 import numpy as np
 
 
@@ -245,3 +246,23 @@ def get_income(
         ).T
 
     return income_retired, income_working
+
+
+@nb.njit
+def set_continuous_point_on_grid(value, grid, gp_ids, gp_weights):
+    n = grid.size
+    if value < grid[0]:
+        gp_ids[0] = 0
+        gp_ids[1] = 1
+    elif value < grid[n - 1]:
+        for i in range(1, n):
+            if value < grid[i]:
+                gp_ids[0] = i - 1
+                gp_ids[1] = i
+                break
+    else:
+        gp_ids[0] = n - 2
+        gp_ids[1] = n - 1
+
+    gp_weights[0] = (grid[gp_ids[1]] - value) / (grid[gp_ids[1]] - grid[gp_ids[0]])
+    gp_weights[1] = np.float64(1.0) - gp_weights[0]

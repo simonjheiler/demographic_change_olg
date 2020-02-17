@@ -10,11 +10,8 @@ import sys
 import numpy as np
 
 from bld.project_paths import project_paths_join as ppj
-from src.model_code.aggregate import aggregate_hc_readable as aggregate_hc
-from src.model_code.auxiliary import get_average_hours_worked
-from src.model_code.auxiliary import get_income
-from src.model_code.auxiliary import gini
-from src.model_code.auxiliary import reshape_as_vector
+from src.model_code.aggregate import aggregate_stationary
+from src.model_code.auxiliary import set_continuous_point_on_grid
 from src.model_code.solve import solve_by_backward_induction_hc_vectorized as solve_hc
 from src.model_code.within_period import get_factor_prices
 
@@ -66,8 +63,16 @@ capital_grid = np.linspace(
     capital_min, capital_max, n_gridpoints_capital, dtype=np.float64
 )
 hc_grid = np.linspace(hc_min, hc_max, n_gridpoints_hc, dtype=np.float64)
-assets_init_idx = (np.abs(capital_grid - assets_init)).argmin()
-hc_init_idx = (np.abs(hc_grid - hc_init)).argmin()
+
+assets_init_gridpoints = np.zeros(2, dtype=np.int32)
+assets_init_weights = np.zeros(2, dtype=np.float64)
+hc_init_gridpoints = np.zeros(2, dtype=np.int32)
+hc_init_weights = np.zeros(2, dtype=np.float64)
+
+set_continuous_point_on_grid(
+    assets_init, capital_grid, assets_init_gridpoints, assets_init_weights
+)
+set_continuous_point_on_grid(hc_init, hc_grid, hc_init_gridpoints, hc_init_weights)
 
 duration_retired = age_max - age_retire + 1
 duration_working = age_retire - 1
@@ -166,7 +171,7 @@ def solve_stationary(model_specs):
             aggregate_labor_out,
             mass_distribution_full_working,
             mass_distribution_full_retired,
-        ) = aggregate_hc(
+        ) = aggregate_stationary(
             policy_capital_working=policy_capital_working,
             policy_hc_working=policy_hc_working,
             policy_labor_working=policy_labor_working,
@@ -177,12 +182,14 @@ def solve_stationary(model_specs):
             capital_grid=capital_grid,
             n_gridpoints_hc=n_gridpoints_hc,
             hc_grid=hc_grid,
-            assets_init_idx=assets_init_idx,
-            hc_init_idx=hc_init_idx,
-            mass=mass,
+            assets_init_gridpoints=assets_init_gridpoints,
+            assets_init_weights=assets_init_weights,
+            hc_init_gridpoints=hc_init_gridpoints,
+            hc_init_weights=hc_init_weights,
             population_growth_rate=population_growth_rate,
             survival_rates=survival_rates,
             efficiency=efficiency,
+            mass_newborns=mass[0],
         )
 
         # Update the guess on capital and labor
@@ -237,38 +244,9 @@ def solve_stationary(model_specs):
     mass_upper_bound = np.sum(np.sum(mass_distribution_full_working, axis=1)[-1, :])
     print(f"mass of agents at upper bound of asset grid = {mass_upper_bound}")
 
-    # Average hours worked
-    hours = get_average_hours_worked(
-        policy_labor_working, mass_distribution_full_working
-    )
-
-    # Calculate Gini coefficient for disposable income
-    # Calculate disposable income
-    income_working, income_retired = get_income(
-        interest_rate,
-        capital_grid,
-        pension_benefit,
-        duration_retired,
-        n_gridpoints_capital,
-        duration_working,
-        n_gridpoints_hc,
-        hc_grid,
-        efficiency,
-        policy_labor_working,
-    )
-    # Reshape mass distribution and income arrays
-    mass_distribution = reshape_as_vector(
-        mass_distribution_full_working, mass_distribution_full_retired
-    )
-    income = reshape_as_vector(income_working, income_retired)
-
-    # Calculate Gini coefficient
-    gini_index, _, _ = gini(mass_distribution, income)
-    print(f"gini_index = {gini_index}")
-
     results = {
-        "aggregate_capital_in": aggregate_capital_in,
-        "aggregate_labor_in": aggregate_labor_in,
+        "aggregate_capital": aggregate_capital_in,
+        "aggregate_labor": aggregate_labor_in,
         "wage_rate": wage_rate,
         "interest_rate": interest_rate,
         "pension_benefit": pension_benefit,
@@ -280,8 +258,6 @@ def solve_stationary(model_specs):
         "value_working": value_working,
         "mass_distribution_full_working": mass_distribution_full_working,
         "mass_distribution_full_retired": mass_distribution_full_retired,
-        "average_hours_worked": hours,
-        "gini_coefficient": gini,
     }
 
     return results

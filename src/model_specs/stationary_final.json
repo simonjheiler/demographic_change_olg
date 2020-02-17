@@ -1,7 +1,7 @@
 {
   "setup_name": "final",
   "productivity_growth_rate": 0.018,
-  "income_tax_rate": 0.0,
-  "aggregate_capital_init": 3.3754,
-  "aggregate_labor_init": 0.3422
+  "income_tax_rate": 0.2,
+  "aggregate_capital_init": 7.453177500275142,
+  "aggregate_labor_init": 1.4304927900047868
 }
