@@ -1,4 +1,37 @@
 \section{Data}
 \label{sec:data}
 
-\dots
+Demographics:
+The demographic parameters are chosen such that the following conditions are met:
+
+
+Shifting age structure:
+    initial mortality rates are taken from the Human Mortality Database (HMD). Model age zero corresponds to real age 20. I abstract from mortality prior to entering the model (implicitly setting conditional year-to-year mortality rates to zero for real ages 0 to 20). Furthermore, the maximum real age in the model is set to 90 years old, corresponding to model age 70. To achieve this, conditional year-to-year survival rates are zero for agents aged 70, irrespective of the time index.
+
+Stationary population size: Fertility rates, i.e. the number of newborn agents each model period are chosen such that total population size remains unchanged over time
+
+
+I apply an add-hoc adjustment to replicate
+
+First, emprical survival rates are truncated at the maximum model age of
+
+Table \ref{tab:life_expectancy} summarizes the simulated life expectancies at different points in the transition.
+
+\begin{table}[ht]
+    \caption{Simulated life expectancy}
+    \label{tab:life_expectancy}
+    \centering
+    \begin{tabular}{l c c}
+        \hline \hline
+                            &at birth   & at retirement \\
+        \hline
+        before transition   &7.5        &1.8 \\
+        at $t=20$           &88         &1.9 \\
+        at $t=30$           &88         &1.9 \\
+        at $t=40$           &88         &1.9 \\
+        at $t=50$           &88         &1.9 \\
+        at $t=60$           &88         &1.9 \\
+        after transition    &8.5        &1.9 \\
+        \hline \hline \\
+    \end{tabular}
+\end{table}

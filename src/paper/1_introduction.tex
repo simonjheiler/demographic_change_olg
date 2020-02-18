@@ -3,25 +3,6 @@
 
 This term paper is a replication of \cite{LudwigSchelkleVogel2012}.
 
-The core of the project is to demonstrate the working of the human capital accumulation mechanism in light of demographic transitions.
+Goal of this term project is to demonstrate the working of the human capital accumulation mechanism in the model by \cite{LudwigSchelkleVogel2012}. To achieve this, I focus on the relevant qualitative features of the framework, model and data developed in \cite{LudwigSchelkleVogel2012} and abstract and simplify as much as possible in all respects but the human capital accumulation mechanism. The core question to be answered in this paper is what is the households reaction in terms of human capital accumulation in light of demographic change. In this context, we model demographic change as changes in the age structure of the population, while keeping population size fixed. Age structure is modelled as a consequence of birth rates and mortality rates and demographic change is induced by changing conditional year to year mortality rates. The details regarding the modelling of population dynamics are described in more detail in section \ref{sec:data}.
 
-In order to focus on the human capital accumulation mechanism, the following simplifying assumptions are made:
-
-Households do not value leisure or, vice versa, do not incur disutility from labor. While abstracting from the labor-leisure choice, one key margin of adjustment of the household is disabled. The remaining trade-off in the labor supply decision solely consists of investing time in earning labor income versus investing time in accumulating / maintaining human capital for higher future productivity. On one hand, this substantially simplifies the computational problem and on the other hand, the labor-leisure trade-off is removed from the analysis, thus making clearer the role of endogenous human capital accumulation.
-
-
-
-To further reduce the computational burden, the following simplifying assumptions are made:
-
-
-Demographics:
-The demographic parameters are chosen such that the following conditions are met:
-
-
-Shifting age structure:
-    initial mortality rates are taken from the Human Mortality Database (HMD). Model age zero corresponds to real age 20. I abstract from mortality prior to entering the model (implicitly setting conditional year-to-year mortality rates to zero for real ages 0 to 20). Furthermore, the maximum real age in the model is set to 90 years old, corresponding to model age 70. To achieve this, conditional year-to-year survival rates are zero for agents aged 70, irrespective of the time index.
-
-Stationary population size: Fertility rates, i.e. the number of newborn agents each model period are chosen such that total population size remains unchanged over time
-
-
-Goal of this term project is to demonstrate the working of the human capital accumulation mechanism in the model by \cite{LudwigSchelkleVogel2012}. To achieve this, I focus on the relevant qualitative features of the framework, model and data developed in \cite{LudwigSchelkleVogel2012} and abstract and simplify as much as possible in all respects but the human capital accumulation mechanism. The core question to be answered in this paper is how do househo
+The remainder of this term paper proceeds as follows. Section \ref{sec:data} briefly introduces the empirical mortality data on which the paper builds, including as the way in which demographic change is modelled and the most important qualitative features of the simulated population dynamics used for the subsequent analyses. Section \ref{sec:model} then presents the model adapted from \cite{LudwigSchelkleVogel2012} in more detail and highlights the key simplifications compared to the original model. In section \ref{sec:results}, the results of the analyses are presented and the implications for the research question are discussed. Section \ref{sec:conclusion} discusses potential extensions to the model, both with respect to the simplified version used in this paper as well as the original model used in \cite{LudwigSchelkleVogel2012} and concludes. Appendix \ref{sec:figures} contains supplementary figures and appendix \ref{sec:computations} contains additional information on the computational routine used to solve the model.
