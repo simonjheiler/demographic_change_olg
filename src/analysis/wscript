@@ -23,7 +23,7 @@ def build(ctx):
             name=f"stationary_{model}",
         )
 
-    # # Solve for transition dynamics
+    # Solve for transition dynamics
     # ctx(
     #     features="run_py_script",
     #     source="transition.py",
