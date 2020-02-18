@@ -240,10 +240,18 @@ def solve_stationary(model_specs):
         ]
     )
 
-    # Check mass of agents at upper bound of asset grid
-    mass_upper_bound = np.sum(np.sum(mass_distribution_full_working, axis=1)[-1, :])
-    print(f"mass of agents at upper bound of asset grid = {mass_upper_bound}")
+    # Check mass of agents at upper bound of grids
+    mass_upper_bound_capital = np.sum(
+        np.sum(mass_distribution_full_working, axis=1)[-1, :]
+    )
+    print(f"mass of agents at upper bound of asset grid = {mass_upper_bound_capital}")
 
+    mass_upper_bound_hc = np.sum(np.sum(mass_distribution_full_working, axis=2)[-1, :])
+    print(
+        f"mass of agents at upper bound of human capital grid = {mass_upper_bound_hc}"
+    )
+
+    # Return results
     results = {
         "aggregate_capital": aggregate_capital_in,
         "aggregate_labor": aggregate_labor_in,
@@ -271,7 +279,6 @@ def solve_stationary(model_specs):
 if __name__ == "__main__":
 
     model_name = sys.argv[1]
-    # model_name = "initial"
 
     model_specs = json.load(
         open(ppj("IN_MODEL_SPECS", f"stationary_{model_name}.json"), encoding="utf-8")
