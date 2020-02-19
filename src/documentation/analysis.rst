@@ -4,11 +4,13 @@
 Main model estimations / simulations
 ************************************
 
-Documentation of the code in *src.analysis*. This is the core of the project.
+The directory *src.analysis* contains the code used to solve for stationary equilibria and transitional dynamics. This is the core of the project.
+
+The routines contained in this directory are wrappers that call all required steps to solve a model for a given specification. Code that is called by both functions is contained in the directory *src.model_code* and documented in section :ref:`model_code`.
 
 
-Schelling example
-=================
+Stationary equilibrium
+======================
 
 .. automodule:: src.analysis.stationary
     :members:

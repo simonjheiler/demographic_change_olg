@@ -191,8 +191,7 @@ latex_documents = [
     (
         "index",
         "project_documentation.tex",
-        """Documentation of the Demographic Change and Human Capital in OLG Models
-        project""",
+        """Documentation: Demographic Change and Human Capital in OLG Models""",
         "Simon J. Heiler",
         "manual",
     )

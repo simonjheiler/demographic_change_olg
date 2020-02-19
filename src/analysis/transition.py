@@ -64,7 +64,7 @@ mass = np.loadtxt(
 capital_grid = np.linspace(
     capital_min, capital_max, n_gridpoints_capital, dtype=np.float64
 )
-hc_grid = np.linspace(hc_min, hc_max, n_gridpoints_hc, dtype=np.float64)
+hc_grid = np.logspace(np.log(hc_min), np.log(hc_max), n_gridpoints_hc, base=np.exp(1))
 
 assets_init_gridpoints = np.zeros(2, dtype=np.int32)
 assets_init_weights = np.zeros(2, dtype=np.float64)
@@ -332,12 +332,11 @@ def solve_transition(
 
             # Iterate backwards through retirement period
             for age_idx in range(duration_retired - 2, -1, -1):
-                # Look up continuation values for assets_next_period and replicate in
-                # assets_this_period dimension
+                # Look up continuation values for assets_next_period
+                value_next_period = value_retired_current[:, age_idx + 1]
+                # Replicate in assets_this_period dimension
                 continuation_value = np.repeat(
-                    value_retired_current[np.newaxis, :, age_idx + 1],
-                    n_gridpoints_capital,
-                    axis=0,
+                    value_next_period[np.newaxis, :], n_gridpoints_capital, axis=0
                 )
 
                 # Solve for policy and value function
@@ -373,6 +372,20 @@ def solve_transition(
                 hc_this_period,
                 hc_next_period,
             ) = np.meshgrid(capital_grid, capital_grid, hc_grid, hc_grid,)
+
+            # Initiate objects to store temporary policy and value functions
+            policy_capital_working_tmp = np.zeros(
+                (n_gridpoints_capital, n_gridpoints_hc), dtype=np.int32
+            )
+            policy_hc_working_tmp = np.zeros(
+                (n_gridpoints_capital, n_gridpoints_hc), dtype=np.int32
+            )
+            policy_labor_working_tmp = np.zeros(
+                (n_gridpoints_capital, n_gridpoints_hc), dtype=np.float64
+            )
+            value_working_tmp = np.zeros(
+                (n_gridpoints_capital, n_gridpoints_hc), dtype=np.float64
+            )
 
             # Iterate backwards through working period
             for age_idx in range(duration_working - 1, -1, -1):

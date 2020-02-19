@@ -1,3 +1,4 @@
+"""Solve for household policy functions."""
 import numba as nb
 import numpy as np
 
@@ -31,20 +32,19 @@ def solve_by_backward_induction_baseline_readable(
     efficiency,
     transition_prod_states,
 ):
-    """ Calculate household policy functions.
+    """Calculate household policy functions.
 
     The *baseline_readable* function is the most straightforward implementation of the
-        backward induction solution algorithm for a model with assets and idiosyncratic
-        productivity states. It consists of nested loops, calculating
-        within-period quantities, flow utilities and continuation values for every
-        combination of current assets, current productivity state, and next period
-        assets on the asset / productivity grid and finds optimal asset choice (on grid)
-        and corresponding value function by comparing the combination of flow-utility and
-        discounted expected continuation value resulting from the particular combination
-        of state and choice.
+    backward induction solution algorithm for a model with assets and idiosyncratic
+    productivity states. It consists of nested loops, calculating
+    within-period quantities, flow utilities and continuation values for every
+    combination of current assets, current productivity state, and next period
+    assets on the asset / productivity grid and finds optimal asset choice (on grid)
+    and corresponding value function by comparing the combination of flow-utility and
+    discounted expected continuation value resulting from the particular combination
+    of state and choice.
 
-    Arguments
-    ---------
+    Arguments:
         interest_rate: np.float64
             Current interest rate on capital holdings
         wage_rate: np.float64
@@ -77,8 +77,7 @@ def solve_by_backward_induction_baseline_readable(
             Profile of age-dependent labor efficiency multipliers
         transition_prod_states: np.array(n_prod_states, n_prod_states)
             Transition probabilities for idiosyncratic productivity states
-    Returns
-    -------
+    Returns:
         policy_capital_working: np.array(n_prod_states, n_gridpoints_capital, duration_working)
             Savings policy function for working age agents (storing optimal asset choices by
             index on asset grid as int)
@@ -284,21 +283,20 @@ def solve_by_backward_induction_hc_readable(
     delta_hc,
     survival_rates,
 ):
-    """ Calculate household policy functions.
+    """Calculate household policy functions.
 
     The *hc_readable* function is the most straightforward implementation of the
-        backward induction solution algorithm for a model with assets and human capital
-        but without idiosyncratic productivity states. Similarly to the *baseline_readable*
-        function, it consists of nested loops, calculating within-period quantities,
-        flow utilities and continuation values for every combination of current assets,
-        current human capital, next period assets and next period human capital on the
-        assets / human capital grid, backing out hc_effort, labor input and consumption
-        implied by the choices and calculating optimal choices and corresponding value
-        function by comparing the combination of flow-utility and discounted expected
-        continuation value resulting from the particular combination of state and choice.
+    backward induction solution algorithm for a model with assets and human capital
+    but without idiosyncratic productivity states. Similarly to the *baseline_readable*
+    function, it consists of nested loops, calculating within-period quantities,
+    flow utilities and continuation values for every combination of current assets,
+    current human capital, next period assets and next period human capital on the
+    assets / human capital grid, backing out hc_effort, labor input and consumption
+    implied by the choices and calculating optimal choices and corresponding value
+    function by comparing the combination of flow-utility and discounted expected
+    continuation value resulting from the particular combination of state and choice.
 
-    Arguments
-    ---------
+    Arguments:
         interest_rate: np.float64
             Current interest rate on capital holdings
         wage_rate: np.float64
@@ -333,8 +331,7 @@ def solve_by_backward_induction_hc_readable(
             Curvature parameter of hc formation technology
         delta_hc: np.float64
             Depreciation rate on human capital
-    Returns
-    -------
+    Returns:
         policy_capital_working: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
             Savings policy function for working age agents (storing optimal asset choices
             by index on asset grid as int)
@@ -557,20 +554,19 @@ def solve_by_backward_induction_hc_vectorized(
     efficiency,
     survival_rates,
 ):
-    """ Calculate household policy functions.
+    """Calculate household policy functions.
 
     The *hc_vectorized* function is an adapted implementation of the backward induction
-        solution algorithm for a model with assets and human capital but without
-        idiosyncratic productivity states. Other than the *hc_readable* function, it
-        operates on meshgrids for every combination of current assets, current human capital,
-        next period assets and next period human capital on the assets / human capital grid,
-        and simultaneously calculates within-period quantities for all combinations, backing
-        out hc_effort, labor input and consumption implied by the choices and calculating
-        optimal choices and corresponding value functions by maximizing over the meshgrids
-        along the corresponding dimensions.
+    solution algorithm for a model with assets and human capital but without
+    idiosyncratic productivity states. Other than the *hc_readable* function, it
+    operates on meshgrids for every combination of current assets, current human capital,
+    next period assets and next period human capital on the assets / human capital grid,
+    and simultaneously calculates within-period quantities for all combinations, backing
+    out hc_effort, labor input and consumption implied by the choices and calculating
+    optimal choices and corresponding value functions by maximizing over the meshgrids
+    along the corresponding dimensions.
 
-    Arguments
-    ---------
+    Arguments:
         interest_rate: np.float64
             Current interest rate on capital holdings
         wage_rate: np.float64
@@ -607,8 +603,7 @@ def solve_by_backward_induction_hc_vectorized(
             Depreciation rate on human capital
         efficiency: np.array(age_retire)
             Profile of age-dependent labor efficiency multipliers
-    Returns
-    -------
+    Returns:
         policy_capital_working: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
             Savings policy function for working age agents (storing optimal asset choices
             by index on asset grid as int)
@@ -799,15 +794,14 @@ def solve_retired(
     policy_capital_retired_tmp,
     value_retired_tmp,
 ):
-    """ Calculate optimal policy and value function for retired agents of a given age.
+    """Calculate optimal policy and value function for retired agents of a given age.
 
     Calculate within-period quantities of retired agents implied by state / choice
-        combinations on meshes and derive optimal choices and corresponding value
-        functions by maximizing sums of flow utility and discounted continuation value
-        over possible choices given states.
+    combinations on meshes and derive optimal choices and corresponding value
+    functions by maximizing sums of flow utility and discounted continuation value
+    over possible choices given states.
 
-    Arguments
-    ---------
+    Arguments:
         assets_this_period:
             ...
         assets_next_period:
@@ -834,8 +828,7 @@ def solve_retired(
             ...
         value_retired_tmp:
             ...
-    Returns
-    -------
+    Returns:
         value_retired_tmp:
             ...
         policy_capital_retired_tmp:
@@ -910,16 +903,15 @@ def solve_working(
     policy_labor_working_tmp,
     value_working_tmp,
 ):
-    """ Calculate optimal policy and value function for working agents of a given age.
+    """Calculate optimal policy and value function for working agents of a given age.
 
     Calculate within-period quantities of working agents implied by states / choices
-        combinations on meshes for current assets, next period assets, current human
-        capital and next period human capital and derive optimal choices and corresponding
-        value functions by maximizing sums of flow utility and discounted continuation value
-        over possible choices for assets and human capital next period given states.
+    combinations on meshes for current assets, next period assets, current human
+    capital and next period human capital and derive optimal choices and corresponding
+    value functions by maximizing sums of flow utility and discounted continuation value
+    over possible choices for assets and human capital next period given states.
 
-    Arguments
-    ---------
+    Arguments:
         assets_this_period: ...
             ...
         assets_next_period: ...
@@ -966,8 +958,7 @@ def solve_working(
             ...
         value_working_tmp: ...
             ...
-    Returns
-    -------
+    Returns:
         policy_capital_working_tmp: ...
             ...
         policy_hc_working_tmp: ...

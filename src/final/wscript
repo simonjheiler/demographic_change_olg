@@ -3,6 +3,7 @@
 
 def build(ctx):
 
+    # Produce plots for simulated demographic dynamics
     ctx(
         features="run_py_script",
         source="plot_demographics.py",
@@ -13,3 +14,36 @@ def build(ctx):
         target=ctx.path_to(ctx, "OUT_FIGURES", "dependency_ratio.png"),
         name="plot_results",
     )
+
+    # Produce plots for stationary equilibria
+    for model in ["initial", "final"]:
+        ctx(
+            features="run_py_script",
+            source="plot_stationary.py",
+            deps=[
+                ctx.path_to(ctx, "IN_MODEL_SPECS", "setup_general.json"),
+                ctx.path_to(ctx, "IN_MODEL_SPECS", f"stationary_{model}.json"),
+            ],
+            target=ctx.path_to(ctx, "OUT_FIGURES", f"results_stationary_{model}.png"),
+            append=f"{model} stationary equilibrium",
+            name=f"plot_results_stationary",
+        )
+
+    # Produce plots for transition dynamics
+    ctx(
+        features="run_py_script",
+        source="plot_transition.py",
+        deps=[
+            ctx.path_to(ctx, "IN_MODEL_SPECS", "setup_general.json"),
+            ctx.path_to(ctx, "IN_MODEL_SPECS", "transition_constant_tax_rate.json"),
+            ctx.path_to(ctx, "OUT_ANALYSIS", "transition.pickle"),
+        ],
+        target=ctx.path_to(ctx, "OUT_FIGURES", "results_transition.png"),
+        amend="transition dynamics",
+        name="plot_results",
+    )
+
+    # Produce project dependency path
+    from src.final.project_dependency_graph import make_project_dependency_graph
+
+    ctx.add_post_fun(make_project_dependency_graph)

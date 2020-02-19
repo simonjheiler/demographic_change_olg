@@ -5,11 +5,28 @@ Visualisation and results formatting
 ************************************
 
 
-Documentation of the code in *src.final*.
+The directory *src.final* contains the code used to create all final outputs of the analyses.
 
 
-Schelling example
+Data work
+=========
+
+.. automodule:: src.final.plot_demographics
+    :members:
+
+
+Model solution
+==============
+
+.. automodule:: src.final.plot_stationary
+    :members:
+
+.. automodule:: src.final.plot_transition
+    :members:
+
+
+Project structure
 =================
 
-.. automodule:: src.final.plot_locations
+.. automodule:: src.final.project_dependency_path
     :members:

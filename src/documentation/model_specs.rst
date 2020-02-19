@@ -4,8 +4,45 @@
 Model specifications
 ********************
 
-The directory *src.model_specs* contains `JSON <http://www.json.org/>`_ files with model specifications. The choice of JSON is motivated by the attempt to be language-agnostic: JSON is quite expressive and there are parsers for nearly all languages. [#]_
+The directory *src.model_specs* contains `JSON <http://www.json.org/>`_ files with model specifications.
 
-The best way to use this is to save a model as ``[model_name].json`` and then pass ``[model_name]`` to your code using the ``append`` keyword of the ``run_py_script`` task generator.
+There are three types of specifications that can be passed to the code: *setup_general*, *stationary* and *transition* specifications.
 
- .. [#] Stata is the only execption I know of. You find a  converter in the wscript file of the Stata branch. Note that there is `insheetjson <http://ideas.repec.org/c/boc/bocode/s457407.html>`_, but that will read a JSON file into the data set rather than into macros, which is what we need here.
+*setup_general*
+    contains basic parameters of the model. Required inputs are:
+    * *beta*: time discount factor of households
+    * *sigma*: inverse elasticity of substitution
+    * *alpha*: capital weight in the production function
+    * *delta_k*: depreciation rate on physical assets
+    * *age_min*: real age corresponding to model age zero
+    * *age_max*: maximum model age
+    * *age_retire*: model retirement age
+    * *delta_hc*: depreciation rate on human capital
+    * *psi*: curvature parameter of human capital formation technology
+    * *zeta*: scaling factor of the human capital formation technology (average learning ability)
+    * *gamma*: weight of consumption utility
+    * *capital_min*: lower bound of the asset grid
+    * *capital_max*: upper bound of the asset grid
+    * *n_gridpoints_capital*: number of grid points of the asset grid
+    * *assets_init*: initial asset holdings of agents entering the model
+    * *hc_min*: lower bound of the human capital grid
+    * *hc_max*: upper bound of the human capital grid
+    * *n_gridpoints_hc*: number of grid points of the human capital grid
+    * *hc_init*: initial human capital level of agents entering the model
+    * *tolerance_capital*: tolerance level for aggregate capital for the solution algorithm
+    * *tolerance_labor*: tolerance level for aggregate labor for the solution algorithm
+    * *max_iterations_inner*: maximum number of iterations for the calculation of stationary equilibria
+    * *max_iterations_outer*: maximum number of iterations for the calculation of transitional dynamics
+    * *iteration_update_inner*: size of the update step for the calculation of stationary equilibria
+    * *iteration_update_outer*: size of the update step for the calculation of transitional dynamics
+
+*stationary*
+    specifications are used to calculate stationary equilibria for a given set of inputs. The required inputs are:
+    * *setup_name*: Name of the specification
+    * *income_tax_rate*: constant labor income tax used to finance the public pension system
+    * *aggregate_capital_init*: starting value for aggregate capital used in the solution algorithm
+    * *aggregate_labor_init*: starting value for aggregate labor used in the solution algorithm
+
+*transition*
+    specifications are used to compute transitional dynamics in between two stationary equilibria. In the current setup, the required inputs are:
+    * *duration_transition*: length of the transition period in between the stationary equilibria

@@ -60,7 +60,7 @@ def extrapolate_survival():
 
     # Adjustment factors to be changed for simulated change in survival probabilities
     adjustment = np.ones((age_max, projection_length), dtype=np.float64)
-    adjustment[:, 10:50] = 0.975
+    adjustment[:, 5:14] = 0.9
 
     # Initiate object to store simulated survival probabilities
     survival_rates = np.ones((age_max, projection_length + 1), dtype=np.float64)

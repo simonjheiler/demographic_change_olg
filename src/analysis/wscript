@@ -3,6 +3,7 @@
 
 def build(ctx):
 
+    pass
     # Solve for initial and final stationary equilibrium
     for model in ["initial", "final"]:
         ctx(
@@ -24,23 +25,23 @@ def build(ctx):
         )
 
     # Solve for transition dynamics
-    # ctx(
-    #     features="run_py_script",
-    #     source="transition.py",
-    #     deps=[
-    #         ctx.path_to(ctx, "IN_DATA", "efficiency_multiplier.csv"),
-    #         ctx.path_to(ctx, "OUT_DATA", "fertility_rates.csv"),
-    #         ctx.path_to(ctx, "OUT_DATA", "survival_rates.csv"),
-    #         ctx.path_to(ctx, "OUT_DATA", "mass_distribution.csv"),
-    #         ctx.path_to(ctx, "IN_MODEL_CODE", "solve.py"),
-    #         ctx.path_to(ctx, "IN_MODEL_CODE", "aggregate.py"),
-    #         ctx.path_to(ctx, "IN_MODEL_SPECS", "setup_general.json"),
-    #         ctx.path_to(ctx, "IN_MODEL_SPECS", "stationary_initial.json"),
-    #         ctx.path_to(ctx, "IN_MODEL_SPECS", "stationary_final.json"),
-    #         ctx.path_to(ctx, "IN_MODEL_SPECS", "transition_constant_tax_rate.json"),
-    #         ctx.path_to(ctx, "OUT_ANALYSIS", "stationary_initial.pickle"),
-    #         ctx.path_to(ctx, "OUT_ANALYSIS", "stationary_final.pickle"),
-    #     ],
-    #     target=ctx.path_to(ctx, "OUT_ANALYSIS", "transition.pickle"),
-    #     name="transition",
-    # )
+    ctx(
+        features="run_py_script",
+        source="transition.py",
+        deps=[
+            ctx.path_to(ctx, "IN_DATA", "efficiency_multiplier.csv"),
+            ctx.path_to(ctx, "OUT_DATA", "fertility_rates.csv"),
+            ctx.path_to(ctx, "OUT_DATA", "survival_rates.csv"),
+            ctx.path_to(ctx, "OUT_DATA", "mass_distribution.csv"),
+            ctx.path_to(ctx, "IN_MODEL_CODE", "solve.py"),
+            ctx.path_to(ctx, "IN_MODEL_CODE", "aggregate.py"),
+            ctx.path_to(ctx, "IN_MODEL_SPECS", "setup_general.json"),
+            ctx.path_to(ctx, "IN_MODEL_SPECS", "stationary_initial.json"),
+            ctx.path_to(ctx, "IN_MODEL_SPECS", "stationary_final.json"),
+            ctx.path_to(ctx, "IN_MODEL_SPECS", "transition_constant_tax_rate.json"),
+            ctx.path_to(ctx, "OUT_ANALYSIS", "stationary_initial.pickle"),
+            ctx.path_to(ctx, "OUT_ANALYSIS", "stationary_final.pickle"),
+        ],
+        target=ctx.path_to(ctx, "OUT_ANALYSIS", "transition.pickle"),
+        name="transition",
+    )

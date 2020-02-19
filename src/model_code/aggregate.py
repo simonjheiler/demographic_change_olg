@@ -1,3 +1,6 @@
+"""Conduct forward iteration of cross-sectional distributions of agents given
+    policy functions.
+"""
 import numba as nb  # noqa:F401
 import numpy as np
 
@@ -26,8 +29,7 @@ def aggregate_baseline_readable(
 ):
     """ Calculate aggregate variables and cross-sectional distribution from HH policy functions.
 
-    Arguments
-    ---------
+    Arguments:
         policy_capital_working: np.array(n_prod_states, n_gridpoints_capital, duration_working)
             Savings policy function for working age agents (storing optimal asset choices by
             index on asset grid as int)
@@ -60,8 +62,7 @@ def aggregate_baseline_readable(
             Annual population growth rate
         prod_states: np.array(n_prod_states, 1)
             Current idiosyncratic productivity state
-    Returns
-    -------
+    Returns:
         aggregate_capital_out: np.float64
             Aggregate capital stock derived from household policy functions and
             cross-sectional distribution
@@ -259,8 +260,7 @@ def aggregate_stationary(
         supply to obtain current period aggregates (assets, human capital, labor supply) and
         cross-sectional distribution over state variables (assets, human capital).
 
-    Arguments
-    ---------
+    Arguments:
         policy_capital_working: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
             Savings policy function for working age agents (storing optimal asset choices
             by index on asset grid as int)
@@ -300,9 +300,7 @@ def aggregate_stationary(
             Vector of conditional year-to-year survival rates
         efficiency: np.array(age_max)
             Vector of age-dependent labor efficiency multipliers
-
-    Returns
-    -------
+    Returns:
         aggregate_capital_out: np.float64
             Aggregate capital stock derived from household policy functions and
             cross-sectional distribution
@@ -465,8 +463,7 @@ def aggregate_step(
         supply to obtain current period aggregates (assets, human capital, labor supply) and
         next periods cross-sectional distribution over state variables (assets, human capital).
 
-    Arguments
-    ---------
+    Arguments:
         mass_distribution_full_working_in: np.array(n_gridpoints_capital, n_gridpoints_hc,
             duration_working)
             Current period cross-sectional distribution of working age households by assets,
@@ -510,8 +507,7 @@ def aggregate_step(
             Vector of conditional year-to-year survival rates
         efficiency: np.array(age_max)
             Vector of age-dependent labor efficiency multipliers
-    Returns
-    -------
+    Returns:
         aggregate_capital_out: np.float64
             Current period aggregate savings (pre interest payment)
         aggregate_labor_out: np.float64
@@ -546,7 +542,7 @@ def aggregate_step(
             mass_distribution_full_working_out[
                 assets_init_gridpoints[i], hc_init_gridpoints[j], 0
             ] = (
-                sum(mass_distribution_full_working_in[:, :, 0])
+                np.sum(mass_distribution_full_working_in[:, :, 0])
                 * (1 + population_growth_rate)
                 * assets_init_weights[i]
                 * hc_init_weights[j]
