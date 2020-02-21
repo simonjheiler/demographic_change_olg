@@ -3,6 +3,7 @@
 
 def build(ctx):
 
+    pass
     # Solve for initial and final stationary equilibrium
     for model in ["initial", "final"]:
         ctx(
@@ -10,9 +11,7 @@ def build(ctx):
             source="stationary.py",
             deps=[
                 ctx.path_to(ctx, "IN_DATA", "efficiency_multiplier.csv"),
-                ctx.path_to(ctx, "OUT_DATA", "fertility_rates.csv"),
-                ctx.path_to(ctx, "OUT_DATA", "survival_rates.csv"),
-                ctx.path_to(ctx, "OUT_DATA", "mass_distribution.csv"),
+                ctx.path_to(ctx, "OUT_DATA", "simulated_demographics.pickle"),
                 ctx.path_to(ctx, "IN_MODEL_CODE", "solve.py"),
                 ctx.path_to(ctx, "IN_MODEL_CODE", "aggregate.py"),
                 ctx.path_to(ctx, "IN_MODEL_SPECS", "setup_general.json"),
@@ -29,9 +28,7 @@ def build(ctx):
         source="transition.py",
         deps=[
             ctx.path_to(ctx, "IN_DATA", "efficiency_multiplier.csv"),
-            ctx.path_to(ctx, "OUT_DATA", "fertility_rates.csv"),
-            ctx.path_to(ctx, "OUT_DATA", "survival_rates.csv"),
-            ctx.path_to(ctx, "OUT_DATA", "mass_distribution.csv"),
+            ctx.path_to(ctx, "OUT_DATA", "simulated_demographics.pickle"),
             ctx.path_to(ctx, "IN_MODEL_CODE", "solve.py"),
             ctx.path_to(ctx, "IN_MODEL_CODE", "aggregate.py"),
             ctx.path_to(ctx, "IN_MODEL_SPECS", "setup_general.json"),

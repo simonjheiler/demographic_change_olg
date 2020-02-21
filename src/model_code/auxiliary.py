@@ -1,74 +1,65 @@
+"""Conduct auxiliary operations throughout the project."""
+import numba as nb
 import numpy as np
 
 
 def gini(pop, val, make_plot=False):
-    """ GINI computes the Gini coefficient and the Lorentz curve.
+    """Computes Gini coefficient and Lorentz curve.
 
-    Usage:
-        gini = gini(pop, val)
-        gini, lorentz_rel = gini(pop, val)
-        gini, lorentz_rel, lorentz_abs = gini(pop, val)
-        ... = gini(pop, val, makeplot)
+    The vectors pop and val must be equally long and must contain
+    only positive values (zeros are also acceptable). A typical application
+    would be that pop represents population sizes of some subgroups (e.g.
+    different countries or states), and val represents the income per
+    capita in this different subgroups. The Gini coefficient is a measure
+    of how unequally income is distributed between these classes. A
+    coefficient of zero means that all subgroups have exactly the same
+    income per capital, so there is no dispesion of income; A very large
+    coefficient would result if all the income accrues only to one subgroup
+    and all the remaining groups have zero income. In the limit, when the
+    total population size approaches infinity, but all the income accrues
+    only to one individual, the Gini coefficient approaches unity.
 
-    Arguments
-    ---------
-        pop (np.array): population sizes of the different classes
-        val (np.array): measurement variable (e.g. income per capita) in the
-            different classes.
-        makeplot (boolean): indicator whether a figure of the Lorentz curve
-            should be produced or not. Default is false.
+    The Lorenz curve is a graphical representation of the distribution. If
+    (x,y) is a point on the Lorenz curve, then the poorest x-share of the
+    population has the y-share of total income. By definition, (0,0) and
+    (1,1) are points on the Lorentz curve (the poorest 0% have 0% of total
+    income, and the poorest 100% [ie, everyone] have 100% of total income).
+    Equal distribution implies that the Lorentz curve is the 45 degree line.
+    Any inequality manifests itself as deviation of the Lorentz curve from
+    the 45 degree line. By construction, the Lorenz curve is weakly convex
+    and increasing.
 
-    Returns
-    -------
-        gini (float): Gini coefficient
-        lorentz_rel (np.array): Lorentz curve (relative): two-column array, with
-            the left column representing cumulative population shares of the
-            different classes, sorted according to val, and the right column
-            representing the cumulative value share that belongs to the
-            population up to the given class. The Lorentz curve is a scatter
-            plot of the left vs the right column.
-        lorentz_abs (np.array): Lorentz curve (absolute): Same as lorentz_rel,
-            except that the components are not normalized to range in the unit
-            interval. Thus, the left column of a is the absolute cumulative
-            population sizes of the classes, and the right column is the
-            absolute cumulative value of all classes up to the given one.
-
-    Example:
-        x = rand(100,1);
-        y = rand(100,1);
-        gini(x,y,true);  # random populations with random incomes figure;
-        gini(x,ones(100,1),true);  # perfect equality
-
-    Explanation: The vectors pop and val must be equally long and must contain
-        only positive values (zeros are also acceptable). A typical application
-        would be that pop represents population sizes of some subgroups (e.g.
-        different countries or states), and val represents the income per
-        capita in this different subgroups. The Gini coefficient is a measure
-        of how unequally income is distributed between these classes. A
-        coefficient of zero means that all subgroups have exactly the same
-        income per capital, so there is no dispesion of income; A very large
-        coefficient would result if all the income accrues only to one subgroup
-        and all the remaining groups have zero income. In the limit, when the
-        total population size approaches infinity, but all the income accrues
-        only to one individual, the Gini coefficient approaches unity.
-
-        The Lorenz curve is a graphical representation of the distribution. If
-        (x,y) is a point on the Lorenz curve, then the poorest x-share of the
-        population has the y-share of total income. By definition, (0,0) and
-        (1,1) are points on the Lorentz curve (the poorest 0% have 0% of total
-        income, and the poorest 100% [ie, everyone] have 100% of total income).
-        Equal distribution implies that the Lorentz curve is the 45 degree line.
-        Any inequality manifests itself as deviation of the Lorentz curve from
-        the 45 degree line. By construction, the Lorenz curve is weakly convex
-        and increasing.
-
-        The two concepts are related as follows: The Gini coefficient is twice
-        the area between the 45 degree line and the Lorentz curve.
+    The two concepts are related as follows: The Gini coefficient is twice
+    the area between the 45 degree line and the Lorentz curve.
 
     Author : Yvan Lengwiler
     Release: $1.0$
     Date   : $2010-06-27$
 
+    Arguments:
+        pop: np.array(length)
+            Population sizes of the different classes
+        val: np.array(length)
+            measurement variable (e.g. income per capita) in the different classes.
+        make_plot: bool
+            indicator whether a figure of the Lorentz curve should be produced
+            or not. Default is false.
+
+    Returns:
+        gini: np.float64
+            Gini coefficient
+        lorentz_rel: np.array(num_classes)
+            Lorentz curve (relative): two-column array, with the left column
+            representing cumulative population shares of the different classes,
+            sorted according to val, and the right column representing the cumulative
+            value share that belongs to the population up to the given class. The
+            Lorentz curve is a scatter plot of the left vs the right column.
+        lorentz_abs: np.array(num_classes)
+            Lorentz curve (absolute): Same as lorentz_rel, except that the
+            components are not normalized to range in the unit interval. Thus,
+            the left column of a is the absolute cumulative population sizes of
+            the classes, and the right column is the absolute cumulative value of
+            all classes up to the given one.
     """
     # check arguments
     assert np.prod(pop.shape) == np.prod(
@@ -139,16 +130,14 @@ def gini(pop, val, make_plot=False):
 
 
 def reshape_as_vector(in_1, in_2):
-    """ Cast input matrices in single vector for function "gini".
+    """Cast input matrices in single vector for function "gini".
 
-    Arguments
-    ---------
+    Arguments:
         in_1: np.array(n_gridpoints_dim_1, n_gridpoints_dim_2, length_1)
             Input for working age agents
         in_2: np.array(n_gridpoints_dim_1, length_2)
             Input for retired agents
-    Returns
-    -------
+    Returns:
         out: np.array(np.prod(in_1.shape) + np.prod(in_2.shape))
             Combined input in vector shape
     """
@@ -160,19 +149,17 @@ def reshape_as_vector(in_1, in_2):
 
 
 def get_average_hours_worked(policy, mass_distribution):
-    """ Compute average hours worked from labor input policy and mass distribution of
+    """Compute average hours worked from labor input policy and mass distribution of
         working age households.
 
-        ...
+    ...
 
-    Arguments
-    ---------
+    Arguments:
         policy: np.array(n_gridpoints_dim_1, n_gridpoints_dim_2, length_1)
             Labor input policy function
         mass_distribution: np.array(n_gridpoints_dim_1, n_gridpoints_dim_2, length_1)
             Mass distribution of working age households
-    Returns
-    -------
+    Returns:
         out: np.array(length)
             Average hours worked by age
     """
@@ -195,12 +182,11 @@ def get_income(
     efficiency,
     policy_labor_working,
 ):
-    """ Compute household income during working age and during retirement.
+    """Compute household income during working age and during retirement.
 
-        ...
+    ...
 
-    Arguments
-    ---------
+    Arguments:
         interest_rate: ---
             ...
         capital_grid: ---
@@ -221,8 +207,7 @@ def get_income(
             ...
         policy_labor_working: ---
             ...
-    Returns
-    -------
+    Returns:
         income_retired: np.array(n_gridpoints_capital, duration_retired)
             Total household income during retirement by current asset level and age
         income_working: np.array(n_gridpoints_capital, n_gridpoints_hc, duration_working)
@@ -245,3 +230,39 @@ def get_income(
         ).T
 
     return income_retired, income_working
+
+
+@nb.njit
+def set_continuous_point_on_grid(value, grid, gp_ids, gp_weights):
+    """Linearly interpolate a continuous value on a given grid.
+
+    Linearly interpolate a continuous value on a discrete grid by first finding
+    the indices of the values on *grid* circumjacent to *value* and then calculating
+    linear interpolation weights.
+
+    Arguments:
+        value: np.float64
+            Value to be interpolated
+        grid: np.array(n_gridpoints)
+            Interpolation grid
+        gp_ids: np.array(2)
+            Indices of interpolation nodes
+        gp_weights: np.array(2)
+            Interpolation weights
+    """
+    n = grid.size
+    if value < grid[0]:
+        gp_ids[0] = 0
+        gp_ids[1] = 1
+    elif value < grid[n - 1]:
+        for i in range(1, n):
+            if value < grid[i]:
+                gp_ids[0] = i - 1
+                gp_ids[1] = i
+                break
+    else:
+        gp_ids[0] = n - 2
+        gp_ids[1] = n - 1
+
+    gp_weights[0] = (grid[gp_ids[1]] - value) / (grid[gp_ids[1]] - grid[gp_ids[0]])
+    gp_weights[1] = np.float64(1.0) - gp_weights[0]

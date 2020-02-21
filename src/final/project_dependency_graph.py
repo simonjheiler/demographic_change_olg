@@ -1,3 +1,4 @@
+"""Produce a project dependency path."""
 import functools
 from pathlib import Path
 

@@ -1,10 +1,4 @@
-.. This the Demographic Change and Human Capital in OLG Models project's documentation master file.
-
-.. You can adapt this file completely to your liking,
-.. but it should at least contain the `toctree` directive.
-
-
-Welcome to the Demographic Change and Human Capital in OLG Models project's documentation!
+Project documentation of the term paper "Demographic Change and Human Capital in OLG Models"
 ================================================================================================
 
 .. toctree::
@@ -18,5 +12,4 @@ Welcome to the Demographic Change and Human Capital in OLG Models project's docu
     paper
     model_code
     model_specs
-    library
     references

@@ -10,17 +10,16 @@ import sys
 import numpy as np
 
 from bld.project_paths import project_paths_join as ppj
-from src.model_code.aggregate import aggregate_hc_readable as aggregate_hc
-from src.model_code.auxiliary import get_average_hours_worked
-from src.model_code.auxiliary import get_income
-from src.model_code.auxiliary import gini
-from src.model_code.auxiliary import reshape_as_vector
-from src.model_code.solve import solve_by_backward_induction_hc_vectorized as solve_hc
+from src.model_code.aggregate import aggregate_stationary
+from src.model_code.auxiliary import set_continuous_point_on_grid
+from src.model_code.solve import solve_retired
+from src.model_code.solve import solve_working
 from src.model_code.within_period import get_factor_prices
+
 
 #####################################################
 # PARAMETERS
-######################################################
+#####################################################
 
 # Load general parameters
 setup = json.load(open(ppj("IN_MODEL_SPECS", "setup_general.json"), encoding="utf-8"))
@@ -51,49 +50,47 @@ iteration_update_inner = np.float64(setup["iteration_update_inner"])
 efficiency = np.loadtxt(
     ppj("IN_DATA", "efficiency_multiplier.csv"), delimiter=",", dtype=np.float64
 )
-fertility_rates = np.loadtxt(
-    ppj("OUT_DATA", "fertility_rates.csv"), delimiter=",", dtype=np.float64
-)
-survival_rates_all = np.loadtxt(
-    ppj("OUT_DATA", "survival_rates.csv"), delimiter=",", dtype=np.float64
-)
-mass_all = np.loadtxt(
-    ppj("OUT_DATA", "mass_distribution.csv"), delimiter=",", dtype=np.float64
-)
+
+with open(ppj("OUT_DATA", "simulated_demographics.pickle"), "rb") as in_file:
+    demographics = pickle.load(in_file)
 
 # Calculate derived parameters
 capital_grid = np.linspace(
     capital_min, capital_max, n_gridpoints_capital, dtype=np.float64
 )
-hc_grid = np.linspace(hc_min, hc_max, n_gridpoints_hc, dtype=np.float64)
-assets_init_idx = (np.abs(capital_grid - assets_init)).argmin()
-hc_init_idx = (np.abs(hc_grid - hc_init)).argmin()
+hc_grid = np.logspace(np.log(hc_min), np.log(hc_max), n_gridpoints_hc, base=np.exp(1))
+
+assets_init_gridpoints = np.zeros(2, dtype=np.int32)
+assets_init_weights = np.zeros(2, dtype=np.float64)
+hc_init_gridpoints = np.zeros(2, dtype=np.int32)
+hc_init_weights = np.zeros(2, dtype=np.float64)
+
+set_continuous_point_on_grid(
+    assets_init, capital_grid, assets_init_gridpoints, assets_init_weights
+)
+set_continuous_point_on_grid(hc_init, hc_grid, hc_init_gridpoints, hc_init_weights)
 
 duration_retired = age_max - age_retire + 1
 duration_working = age_retire - 1
 
+
 #####################################################
 # FUNCTIONS
-######################################################
+#####################################################
 
 
-def solve_stationary(model_specs):
+def solve_stationary(params):
 
     # Load model specifications
-    setup_name = model_specs["setup_name"]
+    setup_name = params["setup_name"]
 
-    if setup_name == "initial":
-        time_idx = 0
-    elif setup_name == "final":
-        time_idx = -1
+    survival_rates = demographics[f"survival_rates_{setup_name}"]
+    population_growth_rate = demographics[f"fertility_{setup_name}"] - 1
+    mass = demographics[f"mass_{setup_name}"]
 
-    population_growth_rate = fertility_rates[time_idx] - 1
-    survival_rates = survival_rates_all[:, time_idx]
-    mass = mass_all[:, time_idx]
-
-    aggregate_capital_in = model_specs["aggregate_capital_init"]
-    aggregate_labor_in = model_specs["aggregate_labor_init"]
-    income_tax_rate = model_specs["income_tax_rate"]
+    aggregate_capital_in = params["aggregate_capital_init"]
+    aggregate_labor_in = params["aggregate_labor_init"]
+    income_tax_rate = params["income_tax_rate"]
 
     ################################################################
     # Loop over capital, labor and pension benefits
@@ -128,34 +125,159 @@ def solve_stationary(model_specs):
         # Solve for policy functions
         ############################################################################
 
-        (
-            policy_capital_working,
-            policy_hc_working,
-            policy_labor_working,
-            policy_capital_retired,
-            value_retired,
-            value_working,
-        ) = solve_hc(
-            interest_rate=interest_rate,
-            wage_rate=wage_rate,
-            capital_grid=capital_grid,
-            n_gridpoints_capital=n_gridpoints_capital,
-            hc_grid=hc_grid,
-            n_gridpoints_hc=n_gridpoints_hc,
-            sigma=sigma,
-            gamma=gamma,
-            pension_benefit=pension_benefit,
-            neg=neg,
-            age_max=age_max,
-            age_retire=age_retire,
-            income_tax_rate=income_tax_rate,
-            beta=beta,
-            zeta=zeta,
-            psi=psi,
-            delta_hc=delta_hc,
-            efficiency=efficiency,
-            survival_rates=survival_rates,
+        # Initialize objects for backward iteration
+        duration_retired = age_max - age_retire + 1  # length of retirement
+        duration_working = age_retire - 1  # length of working life
+
+        value_working = np.zeros(
+            (n_gridpoints_capital, n_gridpoints_hc, duration_working), dtype=np.float64
         )
+        value_retired = np.zeros(
+            (n_gridpoints_capital, duration_retired), dtype=np.float64
+        )
+        policy_capital_working = np.zeros(
+            (n_gridpoints_capital, n_gridpoints_hc, duration_working), dtype=np.int32
+        )
+        policy_capital_retired = np.zeros(
+            (n_gridpoints_capital, duration_retired), dtype=np.int32
+        )
+        policy_hc_working = np.zeros(
+            (n_gridpoints_capital, n_gridpoints_hc, duration_working), dtype=np.int32
+        )
+        policy_labor_working = np.zeros(
+            (n_gridpoints_capital, n_gridpoints_hc, duration_working), dtype=np.float64,
+        )
+
+        ############################################################
+        # BACKWARD INDUCTION
+        ############################################################
+
+        # Retired agents
+
+        # Last period utility
+        consumption_last = (1 + interest_rate) * capital_grid + pension_benefit
+        flow_utility_last = (consumption_last ** ((1 - sigma) * gamma)) / (1 - sigma)
+        value_retired[:, -1] = flow_utility_last
+
+        # Create meshes for assets this period and assets next period
+        assets_next_period, assets_this_period = np.meshgrid(capital_grid, capital_grid)
+
+        # Initiate objects to store temporary policy and value functions
+        policy_capital_retired_tmp = np.zeros(n_gridpoints_capital, dtype=np.int32)
+        value_retired_tmp = np.zeros(n_gridpoints_capital, dtype=np.float64)
+
+        # Iterate backwards through retirement period
+        for age_idx in range(duration_retired - 2, -1, -1):
+            # Look up continuation values for assets_next_period
+            value_next_period = value_retired[:, age_idx + 1]
+            # Replicate in assets_this_period dimension
+            continuation_value = np.repeat(
+                value_next_period[np.newaxis, :], n_gridpoints_capital, axis=0
+            )
+
+            # Solve for policy and value function
+            value_retired_tmp, policy_capital_retired_tmp = solve_retired(
+                assets_this_period=assets_this_period,
+                assets_next_period=assets_next_period,
+                interest_rate=interest_rate,
+                pension_benefit=pension_benefit,
+                beta=beta,
+                gamma=gamma,
+                sigma=sigma,
+                neg=neg,
+                continuation_value=continuation_value,
+                n_gridpoints_capital=n_gridpoints_capital,
+                survival_rate=survival_rates[age_idx],
+                policy_capital_retired_tmp=n_gridpoints_hc,
+                value_retired_tmp=value_retired_tmp,
+            )
+
+            # Store results
+            policy_capital_retired[:, age_idx] = policy_capital_retired_tmp
+            value_retired[:, age_idx] = value_retired_tmp
+
+        # Working agents
+
+        # Create meshes for assets_this_period, assets_next_period, hc_this_period
+        # and hc_next_period
+        (
+            assets_next_period,
+            assets_this_period,
+            hc_this_period,
+            hc_next_period,
+        ) = np.meshgrid(capital_grid, capital_grid, hc_grid, hc_grid,)
+
+        # Initiate objects to store temporary policy and value functions
+        policy_capital_working_tmp = np.zeros(
+            (n_gridpoints_capital, n_gridpoints_hc), dtype=np.int32
+        )
+        policy_hc_working_tmp = np.zeros(
+            (n_gridpoints_capital, n_gridpoints_hc), dtype=np.int32
+        )
+        policy_labor_working_tmp = np.zeros(
+            (n_gridpoints_capital, n_gridpoints_hc), dtype=np.float64
+        )
+        value_working_tmp = np.zeros(
+            (n_gridpoints_capital, n_gridpoints_hc), dtype=np.float64
+        )
+
+        # Iterate backwards through working period
+        for age_idx in range(duration_working - 1, -1, -1):
+
+            # Look up continuation values for combinations of assets_next_period
+            # and hc_next_period
+            if age_idx == duration_working - 1:  # retired next period
+                value_next_period = np.repeat(
+                    value_retired[:, 0, np.newaxis], n_gridpoints_hc, axis=1
+                )
+            else:
+                value_next_period = value_working[:, :, age_idx + 1]
+
+            # Replicate continuation value in assets_this_period and hc_this_period dimension
+            continuation_value = np.repeat(
+                value_next_period[np.newaxis, :, :], n_gridpoints_capital, axis=0
+            )
+            continuation_value = np.repeat(
+                continuation_value[:, :, np.newaxis, :], n_gridpoints_hc, axis=2
+            )
+
+            # Solve for policy and value function
+            (
+                policy_capital_working_tmp,
+                policy_hc_working_tmp,
+                policy_labor_working_tmp,
+                value_working_tmp,
+            ) = solve_working(
+                assets_this_period=assets_this_period,
+                assets_next_period=assets_next_period,
+                hc_this_period=hc_this_period,
+                hc_next_period=hc_next_period,
+                interest_rate=interest_rate,
+                wage_rate=wage_rate,
+                income_tax_rate=income_tax_rate,
+                beta=beta,
+                gamma=gamma,
+                sigma=sigma,
+                neg=neg,
+                continuation_value=continuation_value,
+                delta_hc=delta_hc,
+                zeta=zeta,
+                psi=psi,
+                n_gridpoints_capital=n_gridpoints_capital,
+                n_gridpoints_hc=n_gridpoints_hc,
+                efficiency=np.float64(efficiency[age_idx]),
+                survival_rate=survival_rates[age_idx],
+                policy_capital_working_tmp=policy_capital_working_tmp,
+                policy_hc_working_tmp=policy_hc_working_tmp,
+                policy_labor_working_tmp=policy_labor_working_tmp,
+                value_working_tmp=value_working_tmp,
+            )
+
+            # Store results
+            policy_capital_working[:, :, age_idx] = policy_capital_working_tmp
+            policy_hc_working[:, :, age_idx] = policy_hc_working_tmp
+            policy_labor_working[:, :, age_idx] = policy_labor_working_tmp
+            value_working[:, :, age_idx] = value_working_tmp
 
         ############################################################################
         # Aggregate capital stock and employment
@@ -166,7 +288,7 @@ def solve_stationary(model_specs):
             aggregate_labor_out,
             mass_distribution_full_working,
             mass_distribution_full_retired,
-        ) = aggregate_hc(
+        ) = aggregate_stationary(
             policy_capital_working=policy_capital_working,
             policy_hc_working=policy_hc_working,
             policy_labor_working=policy_labor_working,
@@ -177,12 +299,14 @@ def solve_stationary(model_specs):
             capital_grid=capital_grid,
             n_gridpoints_hc=n_gridpoints_hc,
             hc_grid=hc_grid,
-            assets_init_idx=assets_init_idx,
-            hc_init_idx=hc_init_idx,
-            mass=mass,
+            assets_init_gridpoints=assets_init_gridpoints,
+            assets_init_weights=assets_init_weights,
+            hc_init_gridpoints=hc_init_gridpoints,
+            hc_init_weights=hc_init_weights,
             population_growth_rate=population_growth_rate,
             survival_rates=survival_rates,
             efficiency=efficiency,
+            mass_newborns=mass[0],
         )
 
         # Update the guess on capital and labor
@@ -233,42 +357,21 @@ def solve_stationary(model_specs):
         ]
     )
 
-    # Check mass of agents at upper bound of asset grid
-    mass_upper_bound = np.sum(np.sum(mass_distribution_full_working, axis=1)[-1, :])
-    print(f"mass of agents at upper bound of asset grid = {mass_upper_bound}")
+    # Check mass of agents at upper bound of grids
+    mass_upper_bound_capital = np.sum(
+        np.sum(mass_distribution_full_working, axis=1)[-1, :]
+    )
+    print(f"mass of agents at upper bound of asset grid = {mass_upper_bound_capital}")
 
-    # Average hours worked
-    hours = get_average_hours_worked(
-        policy_labor_working, mass_distribution_full_working
+    mass_upper_bound_hc = np.sum(np.sum(mass_distribution_full_working, axis=2)[-1, :])
+    print(
+        f"mass of agents at upper bound of human capital grid = {mass_upper_bound_hc}"
     )
 
-    # Calculate Gini coefficient for disposable income
-    # Calculate disposable income
-    income_working, income_retired = get_income(
-        interest_rate,
-        capital_grid,
-        pension_benefit,
-        duration_retired,
-        n_gridpoints_capital,
-        duration_working,
-        n_gridpoints_hc,
-        hc_grid,
-        efficiency,
-        policy_labor_working,
-    )
-    # Reshape mass distribution and income arrays
-    mass_distribution = reshape_as_vector(
-        mass_distribution_full_working, mass_distribution_full_retired
-    )
-    income = reshape_as_vector(income_working, income_retired)
-
-    # Calculate Gini coefficient
-    gini_index, _, _ = gini(mass_distribution, income)
-    print(f"gini_index = {gini_index}")
-
+    # Return results
     results = {
-        "aggregate_capital_in": aggregate_capital_in,
-        "aggregate_labor_in": aggregate_labor_in,
+        "aggregate_capital": aggregate_capital_in,
+        "aggregate_labor": aggregate_labor_in,
         "wage_rate": wage_rate,
         "interest_rate": interest_rate,
         "pension_benefit": pension_benefit,
@@ -280,8 +383,6 @@ def solve_stationary(model_specs):
         "value_working": value_working,
         "mass_distribution_full_working": mass_distribution_full_working,
         "mass_distribution_full_retired": mass_distribution_full_retired,
-        "average_hours_worked": hours,
-        "gini_coefficient": gini,
     }
 
     return results
@@ -289,13 +390,12 @@ def solve_stationary(model_specs):
 
 #####################################################
 # SCRIPT
-######################################################
+#####################################################
 
 
 if __name__ == "__main__":
 
     model_name = sys.argv[1]
-    # model_name = "initial"
 
     model_specs = json.load(
         open(ppj("IN_MODEL_SPECS", f"stationary_{model_name}.json"), encoding="utf-8")

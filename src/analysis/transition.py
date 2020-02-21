@@ -10,14 +10,16 @@ import pickle
 import numpy as np
 
 from bld.project_paths import project_paths_join as ppj
-from src.model_code.aggregate import aggregate_hc_readable_step as aggregate_hc_step
+from src.model_code.aggregate import aggregate_step
+from src.model_code.auxiliary import set_continuous_point_on_grid
 from src.model_code.solve import solve_retired
 from src.model_code.solve import solve_working
 from src.model_code.within_period import get_factor_prices
 
+
 #####################################################
 # PARAMETERS
-######################################################
+#####################################################
 
 setup = json.load(open(ppj("IN_MODEL_SPECS", "setup_general.json"), encoding="utf-8"))
 alpha = np.float64(setup["alpha"])
@@ -48,32 +50,36 @@ iteration_update_outer = np.float64(setup["iteration_update_outer"])
 efficiency = np.loadtxt(
     ppj("IN_DATA", "efficiency_multiplier.csv"), delimiter=",", dtype=np.float64
 )
-fertility_rates = np.loadtxt(
-    ppj("OUT_DATA", "fertility_rates.csv"), delimiter=",", dtype=np.float64
-)
-survival_rates = np.loadtxt(
-    ppj("OUT_DATA", "survival_rates.csv"), delimiter=",", dtype=np.float64
-)
-mass = np.loadtxt(
-    ppj("OUT_DATA", "mass_distribution.csv"), delimiter=",", dtype=np.float64
-)
+with open(ppj("OUT_DATA", "simulated_demographics.pickle"), "rb") as in_file:
+    demographics = pickle.load(in_file)
 
+survival_rates = demographics["survival_rates_transition"]
+mass = demographics["mass_transition"]
+fertility_rates = demographics["fertility_transition"]
 
 # Calculate derived parameters
 capital_grid = np.linspace(
     capital_min, capital_max, n_gridpoints_capital, dtype=np.float64
 )
-hc_grid = np.linspace(hc_min, hc_max, n_gridpoints_hc, dtype=np.float64)
+hc_grid = np.logspace(np.log(hc_min), np.log(hc_max), n_gridpoints_hc, base=np.exp(1))
 
-assets_init_idx = (np.abs(capital_grid - assets_init)).argmin()
-hc_init_idx = (np.abs(hc_grid - hc_init)).argmin()
+assets_init_gridpoints = np.zeros(2, dtype=np.int32)
+assets_init_weights = np.zeros(2, dtype=np.float64)
+hc_init_gridpoints = np.zeros(2, dtype=np.int32)
+hc_init_weights = np.zeros(2, dtype=np.float64)
+
+set_continuous_point_on_grid(
+    assets_init, capital_grid, assets_init_gridpoints, assets_init_weights
+)
+set_continuous_point_on_grid(hc_init, hc_grid, hc_init_gridpoints, hc_init_weights)
 
 duration_retired = age_max - age_retire + 1
 duration_working = age_retire - 1
 
+
 #####################################################
 # FUNCTIONS
-######################################################
+#####################################################
 
 
 def solve_transition(
@@ -81,8 +87,8 @@ def solve_transition(
 ):
 
     # Load final steady state
-    aggregate_capital_final = results_final["aggregate_capital_in"]
-    aggregate_labor_final = results_final["aggregate_labor_in"]
+    aggregate_capital_final = results_final["aggregate_capital"]
+    aggregate_labor_final = results_final["aggregate_labor"]
     value_retired_final = results_final["value_retired"]
     value_working_final = results_final["value_working"]
     policy_capital_retired_final = results_final["policy_capital_retired"]
@@ -91,8 +97,8 @@ def solve_transition(
     policy_labor_working_final = results_final["policy_labor_working"]
 
     # Load initial steady state
-    aggregate_capital_initial = results_initial["aggregate_capital_in"]
-    aggregate_labor_initial = results_initial["aggregate_labor_in"]
+    aggregate_capital_initial = results_initial["aggregate_capital"]
+    aggregate_labor_initial = results_initial["aggregate_labor"]
     mass_distribution_full_working_init = results_initial[
         "mass_distribution_full_working"
     ]
@@ -112,11 +118,6 @@ def solve_transition(
 
     # Basic parameters
     duration_transition = transition_params["duration_transition"]
-
-    # Set policy experiment
-    # reform = 0(reform effective at t = 1)
-    # reform = 1(reform effective at t = 21)
-    reform = 0
 
     # # Initial guesses on the paths of K and L
     aggregate_capital_in = np.zeros((duration_transition + 1), dtype=np.float64)
@@ -152,22 +153,23 @@ def solve_transition(
             aggregate_capital_in = aggregate_capital_aux
             aggregate_labor_in = aggregate_labor_aux
     except FileNotFoundError:
-        aggregate_capital_in = np.linspace(
-            aggregate_capital_initial, aggregate_capital_final, duration_transition + 1,
-        )
-        aggregate_labor_in = np.linspace(
-            aggregate_labor_initial, aggregate_labor_final, duration_transition + 1,
-        )
+        try:
+            aggregate_capital_in = np.array(transition_params["aggregate_capital_init"])
+            aggregate_labor_in = np.array(transition_params["aggregate_labor_init"])
+        except KeyError:
+            aggregate_capital_in = np.linspace(
+                aggregate_capital_initial,
+                aggregate_capital_final,
+                duration_transition + 1,
+            )
+            aggregate_labor_in = np.linspace(
+                aggregate_labor_initial, aggregate_labor_final, duration_transition + 1,
+            )
 
     # Construct policy rate path
-    income_tax_rate = np.zeros((duration_transition + 1), dtype=np.float64)
-
-    if reform == 0:
-        income_tax_rate[0] = income_tax_rate_initial
-        income_tax_rate[1:] = income_tax_rate_final
-    else:
-        income_tax_rate[0:19] = income_tax_rate_initial
-        income_tax_rate[20:] = income_tax_rate_final
+    income_tax_rate = np.linspace(
+        income_tax_rate_initial, income_tax_rate_final, duration_transition + 1
+    )
 
     # Initialize iteration
     num_iterations_outer = 0
@@ -223,22 +225,6 @@ def solve_transition(
             duration_transition + 1,
         ),
         dtype=np.float64,
-    )
-
-    # Initiate objects to store temporary policy and value functions
-    policy_capital_retired_tmp = np.zeros(n_gridpoints_capital, dtype=np.int32)
-    value_retired_tmp = np.zeros(n_gridpoints_capital, dtype=np.float64)
-    policy_capital_working_tmp = np.zeros(
-        (n_gridpoints_capital, n_gridpoints_hc), dtype=np.int32
-    )
-    policy_hc_working_tmp = np.zeros(
-        (n_gridpoints_capital, n_gridpoints_hc), dtype=np.int32
-    )
-    policy_labor_working_tmp = np.zeros(
-        (n_gridpoints_capital, n_gridpoints_hc), dtype=np.float64
-    )
-    value_working_tmp = np.zeros(
-        (n_gridpoints_capital, n_gridpoints_hc), dtype=np.float64
     )
 
     # Store final steady state values and policies as last period in transition duration
@@ -309,6 +295,9 @@ def solve_transition(
             ############################################################
 
             # Retired agents
+            # Initiate objects to store temporary policy and value functions
+            policy_capital_retired_tmp = np.zeros(n_gridpoints_capital, dtype=np.int32)
+            value_retired_tmp = np.zeros(n_gridpoints_capital, dtype=np.float64)
 
             # Last period utility
             consumption_last = (1 + interest_rate) * capital_grid + pension_benefit
@@ -324,12 +313,11 @@ def solve_transition(
 
             # Iterate backwards through retirement period
             for age_idx in range(duration_retired - 2, -1, -1):
-                # Look up continuation values for assets_next_period and replicate in
-                # assets_this_period dimension
+                # Look up continuation values for assets_next_period
+                value_next_period = value_retired_current[:, age_idx + 1]
+                # Replicate in assets_this_period dimension
                 continuation_value = np.repeat(
-                    value_retired_current[np.newaxis, :, age_idx + 1],
-                    n_gridpoints_capital,
-                    axis=0,
+                    value_next_period[np.newaxis, :], n_gridpoints_capital, axis=0
                 )
 
                 # Solve for policy and value function
@@ -365,6 +353,20 @@ def solve_transition(
                 hc_this_period,
                 hc_next_period,
             ) = np.meshgrid(capital_grid, capital_grid, hc_grid, hc_grid,)
+
+            # Initiate objects to store temporary policy and value functions
+            policy_capital_working_tmp = np.zeros(
+                (n_gridpoints_capital, n_gridpoints_hc), dtype=np.int32
+            )
+            policy_hc_working_tmp = np.zeros(
+                (n_gridpoints_capital, n_gridpoints_hc), dtype=np.int32
+            )
+            policy_labor_working_tmp = np.zeros(
+                (n_gridpoints_capital, n_gridpoints_hc), dtype=np.float64
+            )
+            value_working_tmp = np.zeros(
+                (n_gridpoints_capital, n_gridpoints_hc), dtype=np.float64
+            )
 
             # Iterate backwards through working period
             for age_idx in range(duration_working - 1, -1, -1):
@@ -460,7 +462,7 @@ def solve_transition(
                 aggregate_labor_out_tmp,
                 mass_distribution_full_working_tmp,
                 mass_distribution_full_retired_tmp,
-            ) = aggregate_hc_step(
+            ) = aggregate_step(
                 mass_distribution_full_working_in=mass_distribution_full_working_in,
                 mass_distribution_full_retired_in=mass_distribution_full_retired_in,
                 policy_capital_working=policy_capital_working_current,
@@ -473,8 +475,10 @@ def solve_transition(
                 capital_grid=capital_grid,
                 n_gridpoints_hc=n_gridpoints_hc,
                 hc_grid=hc_grid,
-                assets_init_idx=assets_init_idx,
-                hc_init_idx=hc_init_idx,
+                assets_init_gridpoints=assets_init_gridpoints,
+                assets_init_weights=assets_init_weights,
+                hc_init_gridpoints=hc_init_gridpoints,
+                hc_init_weights=hc_init_weights,
                 population_growth_rate=population_growth_rate_current,
                 survival_rates=survival_rates_current,
                 efficiency=efficiency,
@@ -492,7 +496,7 @@ def solve_transition(
             ] = mass_distribution_full_retired_tmp
 
         # Display results
-        labor_distribution_age_tmp = np.zeros((age_retire), dtype=np.float64)
+        labor_distribution_age_tmp = np.zeros(age_retire, dtype=np.float64)
         for age_idx in range(duration_working):
             for assets_this_period_idx in range(n_gridpoints_capital):
                 for hc_this_period_idx in range(n_gridpoints_hc):
@@ -542,12 +546,12 @@ def solve_transition(
 
 #####################################################
 # SCRIPT
-######################################################
+#####################################################
 
 
 if __name__ == "__main__":
 
-    transition_params = json.load(
+    transition_params_model = json.load(
         open(
             ppj("IN_MODEL_SPECS", "transition_constant_tax_rate.json"), encoding="utf-8"
         )
@@ -559,7 +563,7 @@ if __name__ == "__main__":
         results_stationary_final = pickle.load(in_file)
 
     results_transition = solve_transition(
-        results_stationary_initial, results_stationary_final, transition_params
+        results_stationary_initial, results_stationary_final, transition_params_model
     )
 
     with open(ppj("OUT_ANALYSIS", f"transition.pickle"), "wb") as out_file:

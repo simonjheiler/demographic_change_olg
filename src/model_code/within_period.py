@@ -1,3 +1,4 @@
+"""Compute within period quantities."""
 import numba as nb
 import numpy as np
 
@@ -20,8 +21,7 @@ def get_labor_input_baseline(
 ):
     """ Calculate optimal household labor input.
 
-    Arguments
-    ---------
+    Arguments:
         assets_this_period: np.float64
             Current asset holdings (pre interest payment)
         assets_next_period: np.float64
@@ -38,8 +38,7 @@ def get_labor_input_baseline(
             Age-dependent labor efficiency multiplier
         gamma: np.float64
             Weight of consumption utility vs. leisure utility
-    Returns
-    -------
+    Returns:
         labor_input: np.float64
             Optimal hours worked
     """
@@ -76,8 +75,7 @@ def get_consumption(
 ):
     """ Calculate consumption level via household budget constraint.
 
-    Arguments
-    ---------
+    Arguments:
         assets_this_period: np.float64
             Current asset holdings (pre interest payment)
         assets_next_period: np.float64
@@ -96,8 +94,7 @@ def get_consumption(
             Current idiosyncratic productivity state or level of human capital
         efficiency: np.float64
             Age-dependent labor efficiency multiplier
-    Returns
-    -------
+    Returns:
         consumption: np.float64
             Household consumption in the current period
     """
@@ -115,8 +112,7 @@ def get_consumption(
 def util(consumption, labor_input, hc_effort, gamma, sigma):
     """ Calculate per-period flow utility of household.
 
-    Arguments
-    ---------
+    Arguments:
         consumption: np.float64
             Household consumption in the current period
         labor_input: np.float64
@@ -127,8 +123,7 @@ def util(consumption, labor_input, hc_effort, gamma, sigma):
             Weight of consumption utility vs. leisure utility
         sigma: np.float64
             Inverse of inter-temporal elasticity of substitution
-    Returns
-    -------
+    Returns:
         flow_utility: np.float64
             Household flow utility for the current period
     """
@@ -149,10 +144,9 @@ def hc_accumulation(hc_this_period, hc_effort, zeta, psi, delta_hc):
     """ Calculate new (post-investment and depreciation) level of human capital.
 
     Human capital formation technology taken from Ludwig, Schelkle, Vogel (2012),
-    adopted rom Ben-Porath (1967).
+        adopted rom Ben-Porath (1967).
 
-    Arguments
-    ---------
+    Arguments:
         hc_this_period: np.float64
             Current level of human capital
         hc_effort: np.float64
@@ -163,8 +157,7 @@ def hc_accumulation(hc_this_period, hc_effort, zeta, psi, delta_hc):
             curvature parameter of hc formation technology
         delta_hc: np.float64
             depreciation rate on human capital
-    Returns
-    -------
+    Returns:
         hc_next_period: np.float64
             New level of human capital
     """
@@ -182,8 +175,7 @@ def get_hc_effort(hc_this_period, hc_next_period, zeta, psi, delta_hc):
     Human capital formation technology taken from Ludwig, Schelkle, Vogel (2012),
     adopted rom Ben-Porath (1967).
 
-    Arguments
-    ---------
+    Arguments:
         hc_this_period: np.float64
             Current level of human capital
         hc_next_period: np.float64
@@ -194,8 +186,7 @@ def get_hc_effort(hc_this_period, hc_next_period, zeta, psi, delta_hc):
             Curvature parameter of hc formation technology
         delta_hc: np.float64
             Depreciation rate on human capital
-    Returns
-    -------
+    Returns:
         hc_effort: np.float64
             Effort invested in human capital accumulation
     """
@@ -216,6 +207,35 @@ def get_factor_prices(
     mass,
     age_retire,
 ):
+    """ Calculate factor prices and pension benefits from aggregate variables.
+
+    Factor prices are derived from equilibrium conditions in the perfectly competitive
+    production sector. Pension benefits are derived from government budget clearing and
+    labor income tax income
+
+    Arguments:
+        aggregate_capital: np.float64
+            Aggregate capital stock
+        aggregate_labor: np.float64
+            Aggregate labor supply
+        alpha: np.float64
+            Capital share in Cobb-Douglas production funciton
+        delta_k: np.float64
+            Depreciation rate on physical capital
+        income_tax_rate: np.float64
+            Labor income tax rate
+        mass: np.array(age_max)
+            Mass distribution of agents
+        age_retire: np.int32
+            Retirement age of agents
+    Returns:
+        interest_rate: np.float64
+            Current interest rate on capital holdings
+        wage_rate: np.float64
+            Current wage rate on effective labor input
+        pension_benefit: np.float64
+            Income from pension benefits
+    """
     interest_rate = np.float64(
         alpha * (aggregate_capital ** (alpha - 1)) * (aggregate_labor ** (1 - alpha))
         - delta_k

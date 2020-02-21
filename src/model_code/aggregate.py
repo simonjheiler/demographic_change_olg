@@ -1,3 +1,6 @@
+"""Conduct forward iteration of cross-sectional distributions of agents given
+    policy functions.
+"""
 import numba as nb  # noqa:F401
 import numpy as np
 
@@ -26,8 +29,7 @@ def aggregate_baseline_readable(
 ):
     """ Calculate aggregate variables and cross-sectional distribution from HH policy functions.
 
-    Arguments
-    ---------
+    Arguments:
         policy_capital_working: np.array(n_prod_states, n_gridpoints_capital, duration_working)
             Savings policy function for working age agents (storing optimal asset choices by
             index on asset grid as int)
@@ -60,8 +62,7 @@ def aggregate_baseline_readable(
             Annual population growth rate
         prod_states: np.array(n_prod_states, 1)
             Current idiosyncratic productivity state
-    Returns
-    -------
+    Returns:
         aggregate_capital_out: np.float64
             Aggregate capital stock derived from household policy functions and
             cross-sectional distribution
@@ -70,11 +71,9 @@ def aggregate_baseline_readable(
             cross-sectional distribution
         mass_distribution_age_assets: np.array(n_gridpoints_capital, age_max)
             Distribution of agents by asset holdings and age
-        mass_distribution_working: np.array(
-            n_prod_states, n_gridpoints_capital, duration_working
-        )
-            Distribution of working age agents by productivity state, asset holdings
-            and age
+        mass_distribution_working: np.array(n_prod_states, n_gridpoints_capital,
+        duration_working)
+            Distribution of working age agents by productivity state, asset holdings and age
         mass_distribution_retired np.array(n_gridpoints_capital, duration_retired)
             Distribution of retired agents by asset holdings and age
     """
@@ -229,7 +228,7 @@ def aggregate_baseline_readable(
 
 
 # @nb.njit
-def aggregate_hc_readable(
+def aggregate_stationary(
     policy_capital_working,
     policy_hc_working,
     policy_labor_working,
@@ -240,17 +239,26 @@ def aggregate_hc_readable(
     capital_grid,
     n_gridpoints_hc,
     hc_grid,
-    assets_init_idx,
-    hc_init_idx,
-    mass,
+    assets_init_gridpoints,
+    assets_init_weights,
+    hc_init_gridpoints,
+    hc_init_weights,
     population_growth_rate,
     survival_rates,
     efficiency,
+    mass_newborns,
 ):
-    """ Calculate aggregate variables and cross-sectional distribution from HH policy functions.
+    """ Calculate stationary cross-sectional (asset and human capital) distribution,
+        aggregate labor and aggregate saving from household policy functions.
 
-    Arguments
-    ---------
+        Start from a given initial mass of households and initial asset and human capital
+        levels, apply constant population growth rate to calculate mass of past newborns,
+        constant survival rates to simulate transition of past newborn to current age-t agents
+        and apply policy functions for asset holdings, human capital levels and labor
+        supply to obtain current period aggregates (assets, human capital, labor supply) and
+        cross-sectional distribution over state variables (assets, human capital).
+
+    Arguments:
         policy_capital_working: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
             Savings policy function for working age agents (storing optimal asset choices
             by index on asset grid as int)
@@ -274,33 +282,35 @@ def aggregate_hc_readable(
             Number of grid points of human capital grid
         hc_grid: np.array(n_gridpoints_capital)
             Human capital grid
-        assets_init_idx: np.int32
-            Index of initial asset level on capital grid
-        hc_init_idx: np.int32
-            Index of initial human capital level on hc grid
-        mass: np.array(age_max, 1)
-            Vector of relative shares of agents by age
+        assets_init_gridpoints: np.array(2)
+            Interpolation indices (int) of initial asset level on capital grid
+        assets_init_weights: np.array(2)
+            Interpolation weights (float) of initial asset level on capital grid
+        hc_init_gridpoints: np.array(2)
+            Interpolation indices (int) of initial human capital level on human capital grid
+        hc_init_weights: np.array(2)
+            Interpolation weights (float) of initial human capital level on human capital grid
+        mass_newborns: np.float64
+            Mass of newborn agents in stationary equilibrium
         population_growth_rate: np.float64
             Annual population growth rate
         survival_rates: np.array(age_max)
             Vector of conditional year-to-year survival rates
         efficiency: np.array(age_max)
             Vector of age-dependent labor efficiency multipliers
-
-    Returns
-    -------
+    Returns:
         aggregate_capital_out: np.float64
             Aggregate capital stock derived from household policy functions and
             cross-sectional distribution
         aggregate_labor_out: np.float64
             Aggregate labor supply derived from household policy functions and
             cross-sectional distribution
-        mass_distribution_full: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
-            Distribution of agents by asset holdings, human capital level and age
-        mass_distribution_capital: np.array(n_gridpoints_capital, age_max)
-            Distribution of agents by asset holdings and age
-        mass_distribution_hc: np.array(n_gridpoints_hc, age_max)
-            Distribution of agents by human capital level and age
+        mass_distribution_full_working: np.array(n_gridpoints_capital, n_gridpoints_hc,
+            duration_working)
+            Cross-sectional distribution of working age agents by asset holdings, human capital
+            level and age
+        mass_distribution_full_retired: np.array(n_gridpoints_capital, duration_retired)
+            Cross-sectional distribution of retired agents by asset holdings and age
     """
     # Initialize objects for forward iteration
     duration_retired = age_max - age_retire + 1  # length of retirement
@@ -319,11 +329,17 @@ def aggregate_hc_readable(
         (n_gridpoints_capital, duration_retired), dtype=np.float64
     )
 
-    # make sure that all agents start with  correct initial level, i.e. hc = 1 and assets = 0
-    mass_distribution_full_working[assets_init_idx, hc_init_idx, 0] = mass[0]
-
-    # mass_distribution_full_working_in = mass_distribution_full_working
-    # mass_distribution_full_retired_in = mass_distribution_full_retired
+    # Store mass of newborn agents at initial node
+    for i in range(2):
+        for j in range(2):
+            mass_distribution_full_working[
+                assets_init_gridpoints[i], hc_init_gridpoints[j], 0
+            ] = (
+                mass_newborns
+                * (1 + population_growth_rate)
+                * assets_init_weights[i]
+                * hc_init_weights[j]
+            )
 
     ############################################################################
     # Iterating over the distribution
@@ -416,7 +432,7 @@ def aggregate_hc_readable(
 
 
 # @nb.njit
-def aggregate_hc_readable_step(
+def aggregate_step(
     mass_distribution_full_working_in,
     mass_distribution_full_retired_in,
     policy_capital_working,
@@ -429,16 +445,29 @@ def aggregate_hc_readable_step(
     capital_grid,
     n_gridpoints_hc,
     hc_grid,
-    assets_init_idx,
-    hc_init_idx,
+    assets_init_gridpoints,
+    assets_init_weights,
+    hc_init_gridpoints,
+    hc_init_weights,
     population_growth_rate,
     survival_rates,
     efficiency,
 ):
-    """ Calculate aggregate variables and cross-sectional distribution from HH policy functions.
+    """ Calculate 1-period evolution of cross-sectional (asset and human capital) distribution,
+        aggregate labor and aggregate saving from household policy functions.
 
-    Arguments
-    ---------
+        Start from a given cross-sectional distribution and, iterating through all possible
+        states, apply policy functions for asset holdings, human capital levels and labor
+        supply to obtain current period aggregates (assets, human capital, labor supply) and
+        next periods cross-sectional distribution over state variables (assets, human capital).
+
+    Arguments:
+        mass_distribution_full_working_in: np.array(n_gridpoints_capital, n_gridpoints_hc,
+            duration_working)
+            Current period cross-sectional distribution of working age households by assets,
+            human capital and age
+        mass_distribution_full_retired_in: np.array(n_gridpoints_capital, duration_retired)
+            Current period cross-sectional distribution of retired households by assets and age
         policy_capital_working: np.array(n_gridpoints_capital, n_gridpoints_hc, age_max)
             Savings policy function for working age agents (storing optimal asset choices
             by index on asset grid as int)
@@ -462,18 +491,21 @@ def aggregate_hc_readable_step(
             Number of grid points of human capital grid
         hc_grid: np.array(n_gridpoints_capital)
             Human capital grid
-        assets_init_idx: np.int32
-            Index of initial asset level on capital grid
-        hc_init_idx: np.int32
-            Index of initial human capital level on hc grid
+        assets_init_gridpoints: np.array(2)
+            Interpolation indices (int) of initial asset level on capital grid
+        assets_init_weights: np.array(2)
+            Interpolation weights (float) of initial asset level on capital grid
+        hc_init_gridpoints: np.array(2)
+            Interpolation indices (int) of initial human capital level on human capital grid
+        hc_init_weights: np.array(2)
+            Interpolation weights (float) of initial human capital level on human capital grid
         population_growth_rate: np.float64
             Growth rate of newborns from current period to next period
         survival_rates: np.array(age_max)
             Vector of conditional year-to-year survival rates
         efficiency: np.array(age_max)
             Vector of age-dependent labor efficiency multipliers
-    Returns
-    -------
+    Returns:
         aggregate_capital_out: np.float64
             Current period aggregate savings (pre interest payment)
         aggregate_labor_out: np.float64
@@ -503,11 +535,16 @@ def aggregate_hc_readable_step(
     )
 
     # Store mass of newborn agents at initial node
-    mass_distribution_full_working_out[
-        assets_init_idx, hc_init_idx, 0
-    ] = mass_distribution_full_working_in[assets_init_idx, hc_init_idx, 0] * (
-        1 + population_growth_rate
-    )
+    for i in range(2):
+        for j in range(2):
+            mass_distribution_full_working_out[
+                assets_init_gridpoints[i], hc_init_gridpoints[j], 0
+            ] = (
+                np.sum(mass_distribution_full_working_in[:, :, 0])
+                * (1 + population_growth_rate)
+                * assets_init_weights[i]
+                * hc_init_weights[j]
+            )
 
     ############################################################################
     # Iterating over the distribution

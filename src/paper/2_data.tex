@@ -1,4 +1,39 @@
 \section{Data}
 \label{sec:data}
 
-\dots
+The age structure in the economy is not modelled directly, but as a consequence of birth rates and mortality rates. Demographic change is then induced by changing these rates. I apply an add-hoc adjustment that does not primarily aim for a realistic representation of the actual mechanisms governing fertility, migration and mortality rates, but instead seeks to replicate the qualitative features of population dynamics central to the analyses in \cite{LudwigSchelkleVogel2012} while keeping computation as simple as possible.
+
+As the paper aims at analyzing both stationary equilibria as well as the transition dynamics that accompany the change in age structure in the population, individual mortality rates for all time indices are modelled. Initial mortality rates are taken from the Human Mortality Database (HMD). Mortality prior to entering the model is abstracted from (by implicitly setting conditional year-to-year mortality rates to zero for real ages prior to model entry). Furthermore, the conditional probability to survive beyond maximum model age is set to zero, irrespective of the time index. Changes in the age structure of the economy are then induced by iteratively adjusting mortality rates by age and time index.
+
+The adjustment factors are chosen to produce the following features of population dynamics:
+\begin{itemize}
+    \item Increase in old-age dependency ratio: The composition of the population follows the pattern presented in section \ref{sec:introduction}
+    \item Stationarity prior and post transition: The changes in mortality rates are "sufficiently far away in time" such that:
+        \begin{itemize}
+            \item Initial state is not affected (too much) through future changes in survival prospects and
+            \item Final state is stationary again (population dynamics "have settled down")
+        \end{itemize}
+    \item Constant population size: Fertility rates are set such that total mass of the population remains constant over time
+\end{itemize}
+
+Through basic experimentation, the following adjustment has been found that meets the above requirements reasonably well. For time indices zero to ten, survival rates remain constant. For time indices ten to 50, conditional year-to-year mortality rates are reduced every year by 2.5%. For time indices 51 to 70, mortality rates remain constant again at their respective time 50 levels. Table \ref{tab:life_expectancy} summarizes the resulting simulated life expectancies at different points in the transition.
+
+\begin{table}[ht]
+    \caption{Simulated life expectancy}
+    \label{tab:life_expectancy}
+    \centering
+    \begin{tabular}{l c c}
+        \hline \hline
+                            &at birth   & at retirement \\
+        \hline
+        before transition   &tbd        &tbd \\
+        at $t=20$           &tbd        &tbd \\
+        at $t=30$           &tbd        &tbd \\
+        at $t=40$           &tbd        &tbd \\
+        at $t=50$           &tbd        &tbd \\
+        at $t=60$           &tbd        &tbd \\
+        after transition    &tbd        &tbd \\
+        \hline \hline \\
+    \end{tabular}
+\end{table}
+

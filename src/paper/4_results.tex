@@ -1,4 +1,56 @@
 \section{Results}
 \label{sec:results}
 
-\dots
+\subsection{Calibration}
+
+Model age zero corresponds to real age 20. Maximum real age is set to 86, corresponding to model age 66. Real retirement age is set to 66, corresponding to model age 46.
+
+Income tax rate is held constant at 20%.
+
+The parameters of the human capital formation technology, $[\delta_h, \zeta, \psi]$ are taken from \cite{LudwigSchelkleVogel2012}.
+
+The parametrization of the model is summarized in table \ref{tab:calibration}.
+
+\begin{table}[ht]
+    \caption{Model calibration}
+    \label{tab:calibration}
+    \centering
+    \begin{tabular}{l l c}
+        \hline \hline
+        variable    &description        &calibrated value   \\
+        \hline
+        $\alpha$    &tbd                &tbd                \\
+        $\delta_k$  &tbd                &tbd                \\
+        $\beta$     &tbd                &tbd                \\
+        $\sigma$    &tbd                &tbd                \\
+        $J$         &tbd                &tbd                \\
+        $JR$        &tbd                &tbd                \\
+        $h_0$       &tbd                &tbd                \\
+        $a_0$       &tbd                &tbd                \\
+        $\delta_h$  &tbd                &tbd                \\
+        $\zeta$     &tbd                &tbd                \\
+        $\psi$      &tbd                &tbd                \\
+        \hline \hline \\
+    \end{tabular}
+\end{table}
+
+
+\subsection{Stationary equilibria}
+
+First, I compare the stationary equilibria resulting from population dynamics prior to and post the shift in mortality rates. As outlined in section \ref{sec:data}, for both the initial and the final state, stationary age distributions are derived from the respective survival rates prior and post adjustment. These stationary populations and implied fertility rates are then used to solve and simulate the model.
+
+\begin{table}[ht]
+    \caption{Stationary equilibria}
+    \label{tab:stationary_aggregates}
+    \centering
+    \begin{tabular}{l c c c c}
+        \hline \hline
+                                &aggregate capital  & aggregate labor   & OADR  & pension benefits \\
+        \hline
+        initial steady state    &7.5                &1.8                &0.27   &1.2  \\
+        final steady state      &8.5                &1.9                &0.40   &1.1  \\
+        \hline \hline \\
+    \end{tabular}
+\end{table}
+
+As can be seen, the change in age structure, while keeping the population size constant, translates into an increase of the old-age dependency ratio and a decrease in pension benefits. At the same time, higher life expectancy raises the need for retirement savings, which results in a larger capital stock in the post-transition economy. In the framework presented in this paper, households do not value leisure, which means that households will invest their entire time endowment in either human capital maintenance / accumulation or labor supply. The labor supply decision and the human capital investment decision are therefore directly linked and changes in labor supply arise from investing in or maintaining higher human capital levels (given that human capital depreciation is assumed to be equal in both economies).

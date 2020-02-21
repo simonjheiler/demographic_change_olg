@@ -4,8 +4,7 @@
 Research paper / presentations
 ******************************
 
+The directory *src.paper* contains the source code to compile the project reports. In the current implementation of the project, the following documents will be produced:
 
-Purpose of the different files (rename them to your liking):
-
-    * :file:`research_paper.tex` contains the actual paper.
-    * :file:`research_pres_30min.tex` contains a typical conference presentation.
+    * :file:`research_paper.tex`: the actual term paper
+    * :file:`research_pres_30min.tex` a short conference presentation

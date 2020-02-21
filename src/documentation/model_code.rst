@@ -4,11 +4,11 @@
 Model code
 **********
 
-The directory *src.model_code* contains source files that might differ by model and that are potentially used at various steps of the analysis.
+The directory *src.model_code* contains source files that are used throughout the project for the solution of various types of models.
 
 
-Code used to solve the model
-============================
+Code contained in *src.model_code*
+==================================
 
 .. automodule:: src.model_code.solve
     :members:
