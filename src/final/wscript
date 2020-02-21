@@ -8,7 +8,7 @@ def build(ctx):
         features="run_py_script",
         source="plot_demographics.py",
         deps=[
-            ctx.path_to(ctx, "OUT_DATA", "mass_distribution.csv"),
+            ctx.path_to(ctx, "OUT_DATA", "simulated_demographics.pickle"),
             ctx.path_to(ctx, "IN_MODEL_SPECS", "setup_general.json"),
         ],
         target=ctx.path_to(ctx, "OUT_FIGURES", "dependency_ratio.png"),

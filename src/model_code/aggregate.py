@@ -71,11 +71,9 @@ def aggregate_baseline_readable(
             cross-sectional distribution
         mass_distribution_age_assets: np.array(n_gridpoints_capital, age_max)
             Distribution of agents by asset holdings and age
-        mass_distribution_working: np.array(
-            n_prod_states, n_gridpoints_capital, duration_working
-        )
-            Distribution of working age agents by productivity state, asset holdings
-            and age
+        mass_distribution_working: np.array(n_prod_states, n_gridpoints_capital,
+        duration_working)
+            Distribution of working age agents by productivity state, asset holdings and age
         mass_distribution_retired np.array(n_gridpoints_capital, duration_retired)
             Distribution of retired agents by asset holdings and age
     """

@@ -16,9 +16,10 @@ from src.model_code.solve import solve_retired
 from src.model_code.solve import solve_working
 from src.model_code.within_period import get_factor_prices
 
+
 #####################################################
 # PARAMETERS
-######################################################
+#####################################################
 
 # Load general parameters
 setup = json.load(open(ppj("IN_MODEL_SPECS", "setup_general.json"), encoding="utf-8"))
@@ -49,15 +50,9 @@ iteration_update_inner = np.float64(setup["iteration_update_inner"])
 efficiency = np.loadtxt(
     ppj("IN_DATA", "efficiency_multiplier.csv"), delimiter=",", dtype=np.float64
 )
-fertility_rates = np.loadtxt(
-    ppj("OUT_DATA", "fertility_rates.csv"), delimiter=",", dtype=np.float64
-)
-survival_rates_all = np.loadtxt(
-    ppj("OUT_DATA", "survival_rates.csv"), delimiter=",", dtype=np.float64
-)
-mass_all = np.loadtxt(
-    ppj("OUT_DATA", "mass_distribution.csv"), delimiter=",", dtype=np.float64
-)
+
+with open(ppj("OUT_DATA", "simulated_demographics.pickle"), "rb") as in_file:
+    demographics = pickle.load(in_file)
 
 # Calculate derived parameters
 capital_grid = np.linspace(
@@ -78,28 +73,24 @@ set_continuous_point_on_grid(hc_init, hc_grid, hc_init_gridpoints, hc_init_weigh
 duration_retired = age_max - age_retire + 1
 duration_working = age_retire - 1
 
+
 #####################################################
 # FUNCTIONS
-######################################################
+#####################################################
 
 
-def solve_stationary(model_specs):
+def solve_stationary(params):
 
     # Load model specifications
-    setup_name = model_specs["setup_name"]
+    setup_name = params["setup_name"]
 
-    if setup_name == "initial":
-        time_idx = 0
-    elif setup_name == "final":
-        time_idx = -1
+    survival_rates = demographics[f"survival_rates_{setup_name}"]
+    population_growth_rate = demographics[f"fertility_{setup_name}"] - 1
+    mass = demographics[f"mass_{setup_name}"]
 
-    population_growth_rate = fertility_rates[time_idx] - 1
-    survival_rates = survival_rates_all[:, time_idx]
-    mass = mass_all[:, time_idx]
-
-    aggregate_capital_in = model_specs["aggregate_capital_init"]
-    aggregate_labor_in = model_specs["aggregate_labor_init"]
-    income_tax_rate = model_specs["income_tax_rate"]
+    aggregate_capital_in = params["aggregate_capital_init"]
+    aggregate_labor_in = params["aggregate_labor_init"]
+    income_tax_rate = params["income_tax_rate"]
 
     ################################################################
     # Loop over capital, labor and pension benefits
@@ -399,7 +390,7 @@ def solve_stationary(model_specs):
 
 #####################################################
 # SCRIPT
-######################################################
+#####################################################
 
 
 if __name__ == "__main__":

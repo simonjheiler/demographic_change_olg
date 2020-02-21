@@ -3,6 +3,7 @@
 """
 import copy
 import json
+import pickle
 
 import numpy as np
 
@@ -30,25 +31,24 @@ projection_length = np.int32(params_transition["duration_transition"])
 
 
 def extrapolate_survival():
-    """ Extrapolate empirical survival rates
+    """Extrapolate empirical survival rates
 
     Extrapolate empirical survival rates taken from the Human Mortality
-        Database (HMD) to qualitatively replicate the change in the old age dependency
-        ratio that is at the center of the analyses in Ludwig, Schelkle, Vogel (2006).
+    Database (HMD) to qualitatively replicate the change in the old age dependency
+    ratio that is at the center of the analyses in Ludwig, Schelkle, Vogel (2006).
 
     This is a short-cut that abstracts from actual modelling of changes in fertility
-        and is solely designed to generate survival rates that mimic the most important
-        qualitative features of realistic projections of future mortality rates.
+    and is solely designed to generate survival rates that mimic the most important
+    qualitative features of realistic projections of future mortality rates.
 
     Start from the observed survival rates, truncate such that they are consistent with
-        minimum and maximum model age. Then, iteratively convert to mortality rates,
-        adjust future mortality rates with a fixed and exogenous matrix of adjustment
-        factors (which is, in turn, chosen such that basic features of the population
-        dynamics of Ludwig, Schelkle, Vogel (2006) are obtained), convert back to survival
-        rates (making sure that mortality at maximum age is 1.0).
+    minimum and maximum model age. Then, iteratively convert to mortality rates,
+    adjust future mortality rates with a fixed and exogenous matrix of adjustment
+    factors (which is, in turn, chosen such that basic features of the population
+    dynamics of Ludwig, Schelkle, Vogel (2006) are obtained), convert back to survival
+    rates (making sure that mortality at maximum age is 1.0).
 
-    Returns
-    -------
+    Returns:
         survival_rates: np.array(age_max, projection_length + 1)
             Matrix of simulated conditional year-to-year survival rates by age and time
     """
@@ -60,7 +60,7 @@ def extrapolate_survival():
 
     # Adjustment factors to be changed for simulated change in survival probabilities
     adjustment = np.ones((age_max, projection_length), dtype=np.float64)
-    adjustment[:, 5:14] = 0.9
+    adjustment[:, 5:29] = 0.95
 
     # Initiate object to store simulated survival probabilities
     survival_rates = np.ones((age_max, projection_length + 1), dtype=np.float64)
@@ -85,26 +85,24 @@ def extrapolate_survival():
 
 
 def simulate_mass(survival_rates):
-    """ Simulate the mass distribution by age of an economy over time
+    """Simulate the mass distribution by age of an economy over time
 
     Simulate population dynamics over time by iterating over fertility rates to generate
-        and survival rates
+    and survival rates
 
     Time 0 distribution obtained by iterating backward over constant (initial) population
-        growth rate to obtain mass of newborns in -t and then multiplying by unconditional
-        survival probability to survive from -t to 0 (based on constant initial survival
-        probabilities).
+    growth rate to obtain mass of newborns in -t and then multiplying by unconditional
+    survival probability to survive from -t to 0 (based on constant initial survival
+    probabilities).
 
     Time t newborns obtained by iterating forward over fertility rates. Time t distribution
-        obtained by iterating forward t-1 distribution given time t-1 conditional survival
-        probabilities.
+    obtained by iterating forward t-1 distribution given time t-1 conditional survival
+    probabilities.
 
-    Arguments
-    ---------
+    Arguments:
         survival_rates: np.array(age_max, projection_length)
             Conditional year-to-year survival probabilities by age and time (cohort)
-    Returns
-    -------
+    Returns:
         mass_distribution: np.array(age_max, projection_length)
             Distribution of agents by age and time (cohort), normalized s.th. year-0
             cohort has mass 1
@@ -139,19 +137,17 @@ def simulate_mass(survival_rates):
 
 
 def find_stationary_population(survival_rates):
-    """ Find the stationary population distribution and implied fertility rate given
+    """Find the stationary population distribution and implied fertility rate given
         survival rates.
 
     Iteratively simulate population dynamics over time for given fixed survival rates,
-        replacing mass of deceased agents in all periods. Stationary distribution is
-        achieved by convergence and assumed to be met after sufficiently many iterations.
+    replacing mass of deceased agents in all periods. Stationary distribution is
+    achieved by convergence and assumed to be met after sufficiently many iterations.
 
-    Arguments
-    ---------
+    Arguments:
         survival_rates: np.array(age_max, projection_length)
             Conditional year-to-year survival probabilities by age
-    Returns
-    -------
+    Returns:
         mass_stationary: np.array(age_max)
             Stationary distribution of agents by age
         fertility_rates: np.float64
@@ -177,12 +173,6 @@ def find_stationary_population(survival_rates):
     return mass_stationary, fertility_stationary
 
 
-def save_data(sample_1, sample_2, sample_3):
-    np.savetxt(ppj("OUT_DATA", "survival_rates.csv"), sample_1, delimiter=",")
-    np.savetxt(ppj("OUT_DATA", "fertility_rates.csv"), sample_2, delimiter=",")
-    np.savetxt(ppj("OUT_DATA", "mass_distribution.csv"), sample_3, delimiter=",")
-
-
 #####################################################
 # SCRIPT
 ######################################################
@@ -190,6 +180,25 @@ def save_data(sample_1, sample_2, sample_3):
 if __name__ == "__main__":
 
     survival_rates_sim = extrapolate_survival()
-    mass_sim, fertility_rates_sim = simulate_mass(survival_rates_sim)
+    mass_initial, fertility_initial = find_stationary_population(
+        survival_rates_sim[:, 0]
+    )
+    # mass_final, fertility_final = find_stationary_population(survival_rates_sim[:, -1])
+    mass_transition, fertility_transition = simulate_mass(survival_rates_sim)
+    mass_final = mass_transition[:, -1]
+    fertility_final = fertility_transition[-1]
 
-    save_data(survival_rates_sim, fertility_rates_sim, mass_sim)
+    save_files = {
+        "survival_rates_initial": survival_rates_sim[:, 0],
+        "mass_initial": mass_initial,
+        "fertility_initial": fertility_initial,
+        "survival_rates_final": survival_rates_sim[:, -1],
+        "mass_final": mass_final,
+        "fertility_final": fertility_final,
+        "survival_rates_transition": survival_rates_sim,
+        "mass_transition": mass_transition,
+        "fertility_transition": fertility_transition,
+    }
+
+    with open(ppj("OUT_DATA", f"simulated_demographics.pickle"), "wb") as out_file:
+        pickle.dump(save_files, out_file)

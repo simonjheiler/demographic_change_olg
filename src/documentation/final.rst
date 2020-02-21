@@ -28,5 +28,5 @@ Model solution
 Project structure
 =================
 
-.. automodule:: src.final.project_dependency_path
+.. automodule:: src.final.project_dependency_graph
     :members:

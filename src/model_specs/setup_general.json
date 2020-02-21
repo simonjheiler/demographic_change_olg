@@ -12,16 +12,16 @@
   "gamma": 1.0,
   "capital_min": 0.001,
   "capital_max": 30.0,
-  "n_gridpoints_capital": 40,
+  "n_gridpoints_capital": 60,
   "assets_init": 0.001,
   "hc_min": 1.0,
   "hc_max": 4.0,
-  "n_gridpoints_hc": 15,
+  "n_gridpoints_hc": 20,
   "hc_init": 1.0,
   "tolerance_capital": 0.0001,
   "tolerance_labor": 0.0001,
-  "max_iterations_inner": 100,
-  "max_iterations_outer": 10,
-  "iteration_update_inner": 0.1,
-  "iteration_update_outer": 0.1
+  "max_iterations_inner": 10,
+  "max_iterations_outer": 3,
+  "iteration_update_inner": 0.05,
+  "iteration_update_outer": 0.05
 }

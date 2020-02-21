@@ -1,4 +1,5 @@
 import json
+import pickle
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -19,14 +20,19 @@ with open(ppj("IN_MODEL_SPECS", "setup_general.json")) as json_file:
 age_max = np.int32(params_general["age_max"])
 age_retire = np.int32(params_general["age_retire"])
 
+with open(ppj("OUT_DATA", "simulated_demographics.pickle"), "rb") as in_file:
+    demographics = pickle.load(in_file)
+
 
 #####################################################
 # FUNCTIONS
 ######################################################
 
 
-def plot_dependency_ratio(mass_distribution):
+def plot_dependency_ratio():
     """Plot the development of the old-age dependency ratio over time."""
+
+    mass_distribution = demographics["mass_transition"]
 
     projection_length = mass_distribution.shape[1]
 
@@ -54,9 +60,4 @@ def plot_dependency_ratio(mass_distribution):
 
 if __name__ == "__main__":
 
-    # Load simulated mass distribution
-    mass_distribution_sim = np.loadtxt(
-        ppj("OUT_DATA", "mass_distribution.csv"), delimiter=",", dtype=np.float64,
-    )
-
-    plot_dependency_ratio(mass_distribution_sim)
+    plot_dependency_ratio()
