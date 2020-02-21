@@ -48,5 +48,8 @@ There are three types of specifications that can be passed to the code: *setup_g
 *transition* specifications are used to compute transitional dynamics in between two stationary equilibria. In the current setup, the required inputs are:
 
     * *duration_transition*: length of the transition period in between the stationary equilibria
-    * *aggregate_capital_init*: starting values for aggregate capital path during transition (important: must be of length *duration_transition* + 1)
-    * *aggregate_labor_init*: starting values for aggregate labor path during transition (important: must be of length *duration_transition* + 1)
+    * *mortality_adjustment_start_time*: first time index for which adjustment of mortality rates is applied
+    * *mortality_adjustment_end_time*: last time index for which adjustment of mortality rates is applied
+    * *mortality_adjustment_factor*: (multiplicative) adjustment factor for mortality rates
+    * *aggregate_capital_init* (optional input): starting values for aggregate capital path during transition (important: must be of length *duration_transition* + 1); if no starting value are provided, the algorithm starts with a linearly interpolated path from initial to final stationary equilibrium
+    * *aggregate_labor_init* (optional input): starting values for aggregate labor path during transition (important: must be of length *duration_transition* + 1); if no starting value are provided, the algorithm starts with a linearly interpolated path from initial to final stationary equilibrium

@@ -44,10 +44,7 @@ def plot_dependency_ratio():
     ax.plot(plot_x, plot_y)
 
     ax.set(
-        xlabel="time index",
-        ylabel="old-age dependency ratio",
-        ybound=[0, 0.6],
-        title="Old-age dependency ratio over time",
+        xlabel="time index", ylabel="old-age dependency ratio", ybound=[0, 0.6],
     )
 
     fig.savefig(ppj("OUT_FIGURES", "dependency_ratio.png"))
