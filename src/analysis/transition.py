@@ -40,11 +40,10 @@ hc_min = np.float64(setup["hc_min"])
 hc_max = np.float64(setup["hc_max"])
 n_gridpoints_hc = np.int32(setup["n_gridpoints_hc"])
 hc_init = np.float64(setup["hc_init"])
-tolerance_capital = np.float64(setup["tolerance_capital"])
-tolerance_labor = np.float64(setup["tolerance_labor"])
-max_iterations_inner = np.int32(setup["max_iterations_inner"])
-max_iterations_outer = np.int32(setup["max_iterations_outer"])
-iteration_update_outer = np.float64(setup["iteration_update_outer"])
+tolerance_capital = np.float64(setup["tolerance_capital_transition"])
+tolerance_labor = np.float64(setup["tolerance_labor_transition"])
+max_iterations = np.int32(setup["max_iterations_transition"])
+iteration_update = np.float64(setup["iteration_update_transition"])
 
 # Load demographic parameters
 efficiency = np.loadtxt(
@@ -172,7 +171,7 @@ def solve_transition(
     )
 
     # Initialize iteration
-    num_iterations_outer = 0
+    num_iterations = 0
     deviation_capital = 10
     deviation_labor = 10
     neg = np.float64(-1e10)
@@ -259,13 +258,13 @@ def solve_transition(
     aggregate_capital_out[0] = aggregate_capital_in[0]
 
     # Iterate
-    while (num_iterations_outer < max_iterations_outer) and (
+    while (num_iterations < max_iterations) and (
         (abs(deviation_capital) > tolerance_capital)
         or (abs(deviation_labor) > tolerance_labor)
     ):
-        num_iterations_outer += 1
+        num_iterations += 1
 
-        print(f"Iteration {num_iterations_outer} out of {max_iterations_outer}")
+        print(f"Iteration {num_iterations} out of {max_iterations}")
 
         for time_idx in range(duration_transition - 1, -1, -1):
 
@@ -519,11 +518,11 @@ def solve_transition(
 
         # Update the guess on capital and labor
         aggregate_capital_in = (
-            1 - iteration_update_outer
-        ) * aggregate_capital_in + iteration_update_outer * aggregate_capital_out
+            1 - iteration_update
+        ) * aggregate_capital_in + iteration_update * aggregate_capital_out
         aggregate_labor_in = (
-            1 - iteration_update_outer
-        ) * aggregate_labor_in + iteration_update_outer * aggregate_labor_out
+            1 - iteration_update
+        ) * aggregate_labor_in + iteration_update * aggregate_labor_out
 
         print("deviation-capital deviation-labor")
         print([deviation_capital, deviation_labor])

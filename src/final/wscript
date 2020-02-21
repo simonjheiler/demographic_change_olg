@@ -3,6 +3,10 @@
 
 def build(ctx):
 
+    ########################################
+    # PLOTS
+    ########################################
+
     # Produce plots for simulated demographic dynamics
     ctx(
         features="run_py_script",
@@ -12,7 +16,7 @@ def build(ctx):
             ctx.path_to(ctx, "IN_MODEL_SPECS", "setup_general.json"),
         ],
         target=ctx.path_to(ctx, "OUT_FIGURES", "dependency_ratio.png"),
-        name="plot_results",
+        name="plot_demographics",
     )
 
     # Produce plots for stationary equilibria
@@ -40,8 +44,31 @@ def build(ctx):
         ],
         target=ctx.path_to(ctx, "OUT_FIGURES", "results_transition.png"),
         amend="transition dynamics",
-        name="plot_results",
+        name="plot_results_transition",
     )
+
+    ########################################
+    # TABLES
+    ########################################
+
+    # Produce tables for simulated demographic dynamics
+    ctx(
+        features="run_py_script",
+        source="create_tables.py",
+        deps=[
+            ctx.path_to(ctx, "OUT_DATA", "simulated_demographics.pickle"),
+            ctx.path_to(ctx, "IN_MODEL_SPECS", "setup_general.json"),
+        ],
+        target=[
+            ctx.path_to(ctx, "OUT_DATA", "calibration.csv"),
+            ctx.path_to(ctx, "OUT_DATA", "life_expectancy.csv"),
+        ],
+        name="create_tables",
+    )
+
+    ########################################
+    # OTHER OUTPUTS
+    ########################################
 
     # Produce project dependency path
     from src.final.project_dependency_graph import make_project_dependency_graph

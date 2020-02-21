@@ -29,12 +29,14 @@ There are three types of specifications that can be passed to the code: *setup_g
     * *hc_max*: upper bound of the human capital grid
     * *n_gridpoints_hc*: number of grid points of the human capital grid
     * *hc_init*: initial human capital level of agents entering the model
-    * *tolerance_capital*: tolerance level for aggregate capital for the solution algorithm
-    * *tolerance_labor*: tolerance level for aggregate labor for the solution algorithm
-    * *max_iterations_inner*: maximum number of iterations for the calculation of stationary equilibria
-    * *max_iterations_outer*: maximum number of iterations for the calculation of transitional dynamics
-    * *iteration_update_inner*: size of the update step for the calculation of stationary equilibria
-    * *iteration_update_outer*: size of the update step for the calculation of transitional dynamics
+    * *tolerance_capital_stationary*: tolerance level for aggregate capital for the stationary solution algorithm
+    * *tolerance_labor_stationary*: tolerance level for aggregate labor for the stationary solution algorithm
+    * *tolerance_capital_transition*: tolerance level for aggregate capital for the transition solution algorithm
+    * *tolerance_labor_transition*: tolerance level for aggregate labor for the transition solution algorithm
+    * *max_iterations_stationary*: maximum number of iterations for the calculation of stationary equilibria
+    * *max_iterations_transition*: maximum number of iterations for the calculation of transitional dynamics
+    * *iteration_update_stationary*: size of the update step for the calculation of stationary equilibria
+    * *iteration_update_transition*: size of the update step for the calculation of transitional dynamics
 
 *stationary* specifications are used to calculate stationary equilibria for a given set of inputs. The required inputs are
 

@@ -41,10 +41,10 @@ hc_min = np.float64(setup["hc_min"])
 hc_max = np.float64(setup["hc_max"])
 n_gridpoints_hc = np.int32(setup["n_gridpoints_hc"])
 hc_init = np.float64(setup["hc_init"])
-tolerance_capital = np.float64(setup["tolerance_capital"])
-tolerance_labor = np.float64(setup["tolerance_labor"])
-max_iterations_inner = np.int32(setup["max_iterations_inner"])
-iteration_update_inner = np.float64(setup["iteration_update_inner"])
+tolerance_capital = np.float64(setup["tolerance_capital_stationary"])
+tolerance_labor = np.float64(setup["tolerance_labor_stationary"])
+max_iterations = np.int32(setup["max_iterations_stationary"])
+iteration_update = np.float64(setup["iteration_update_stationary"])
 
 # Load demographic parameters
 efficiency = np.loadtxt(
@@ -96,19 +96,19 @@ def solve_stationary(params):
     # Loop over capital, labor and pension benefits
     ################################################################
     # Initialize iteration
-    num_iterations_inner = 0  # Counter for iterations
+    num_iterations = 0  # Counter for iterations
 
     aggregate_capital_out = aggregate_capital_in + 10
     aggregate_labor_out = aggregate_labor_in + 10
     neg = np.float64(-1e10)  # very small number
 
-    while (num_iterations_inner < max_iterations_inner) and (
+    while (num_iterations < max_iterations) and (
         (abs(aggregate_capital_out - aggregate_capital_in) > tolerance_capital)
         or (abs(aggregate_labor_out - aggregate_labor_in) > tolerance_labor)
     ):
-        num_iterations_inner += 1
+        num_iterations += 1
 
-        print(f"Iteration {num_iterations_inner} out of {max_iterations_inner}")
+        print(f"Iteration {num_iterations} out of {max_iterations}")
 
         # Calculate factor prices from aggregates
         (interest_rate, wage_rate, pension_benefit) = get_factor_prices(
@@ -311,11 +311,11 @@ def solve_stationary(params):
 
         # Update the guess on capital and labor
         aggregate_capital_in = (
-            1 - iteration_update_inner
-        ) * aggregate_capital_in + iteration_update_inner * aggregate_capital_out
+            1 - iteration_update
+        ) * aggregate_capital_in + iteration_update * aggregate_capital_out
         aggregate_labor_in = (
-            1 - iteration_update_inner
-        ) * aggregate_labor_in + iteration_update_inner * aggregate_labor_out
+            1 - iteration_update
+        ) * aggregate_labor_in + iteration_update * aggregate_labor_out
 
         # Display results
         print("capital | labor | pension ")
