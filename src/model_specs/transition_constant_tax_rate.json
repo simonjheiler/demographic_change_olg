@@ -1,5 +1,8 @@
 {
   "duration_transition": 55,
+  "mortality_adjustment_start_time": 5,
+  "mortality_adjustment_end_time": 29,
+  "mortality_adjustment_factor": 0.95,
   "aggregate_capital_init": [
     8.74979489,
     8.71990412,

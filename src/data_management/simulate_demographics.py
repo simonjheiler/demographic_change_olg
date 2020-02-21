@@ -22,7 +22,11 @@ age_min = np.int32(params_general["age_min"])
 
 with open(ppj("IN_MODEL_SPECS", "transition_constant_tax_rate.json")) as json_file:
     params_transition = json.load(json_file)
+
 projection_length = np.int32(params_transition["duration_transition"])
+adjustment_start = np.int32(params_transition["mortality_adjustment_start_time"])
+adjustment_end = np.int32(params_transition["mortality_adjustment_end_time"])
+adjustment_factor = np.float64(params_transition["mortality_adjustment_factor"])
 
 
 #####################################################
@@ -60,7 +64,7 @@ def extrapolate_survival():
 
     # Adjustment factors to be changed for simulated change in survival probabilities
     adjustment = np.ones((age_max, projection_length), dtype=np.float64)
-    adjustment[:, 5:29] = 0.95
+    adjustment[:, adjustment_start:adjustment_end] = adjustment_factor
 
     # Initiate object to store simulated survival probabilities
     survival_rates = np.ones((age_max, projection_length + 1), dtype=np.float64)
@@ -200,5 +204,5 @@ if __name__ == "__main__":
         "fertility_transition": fertility_transition,
     }
 
-    with open(ppj("OUT_DATA", f"simulated_demographics.pickle"), "wb") as out_file:
+    with open(ppj("OUT_DATA", "simulated_demographics.pickle"), "wb") as out_file:
         pickle.dump(save_files, out_file)

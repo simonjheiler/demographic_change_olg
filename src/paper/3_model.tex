@@ -17,19 +17,19 @@ To further reduce the computational burden, the following simplifying assumption
 
 In contrast to the original paper by \cite{LudwigSchelkleVogel2012}, pension benefits are in this paper not linked to income histories. In other words, every retired agent qualifies for the same level of pension benefits. This simplifies computation substantially, especially
 
-Human capital is produced with a technology commonly used in the literature and first introduced by \cite{Ben-Porath1960}. Human capital next period is a function of the current level of human capital, $h_t$, and the effort exerted to produce additional human capital, $e_t$,
+Human capital is produced with a technology commonly used in the literature and first introduced by \cite{Ben-Porath1967}. Human capital next period is a function of the current level of human capital, $h_t$, and the effort exerted to produce additional human capital, $e_t$,
 $$ h_{t+1} = (1-\delta_h) h_t + \zeta (e_t h_t)^\psi$$
 where $\delta_h$ is the depreciation rate on human capital, $\zeta$ is a scaling factor capturing average learning ability and $\psi$ is the curvature parameter of the production technology.
 
 The household optimization problem in the stationary economy thus is
 \begin{align*}
-    \max_{\{c_j, e_j, a_{j+1}, h_{j+1}\}_{j=0}^J} \sum_{j=0}^J \beta^j \pi_{j} u(c_j) \\
+    \max_{\{c_j, e_j, a_{j+1}, h_{j+1}\}_{j=0}^J} & \sum_{j=0}^J \beta^j \pi_{j} u(c_j) \\
     \text{s.t.} \;  & c_j + a_{j+1} = (1+\bar{r}) a_j + (1-\tau) (1-e_j) z_j h_j + b_j \quad\text{for}\; j=0,\dots,J \\
                     & h_{j+1} = (1-\delta_h) h_j + \zeta (e_j h_j)^\psi \quad\text{for}\; j=0,\dots,J \\
                     & a_{j+1} \leq 0 \quad \quad\text{for}\; j=0,\dots,J \\
                     & h_{j+1} \leq 0 \quad \quad\text{for}\; j=0,\dots,J \\
                     & e_j \in [0, 1] \quad \quad\text{for}\; j=0,\dots,J \\
-                    & a_0, h_0 given
+                    & a_0, h_0 \;\text{given}
 \end{align*}
 
 

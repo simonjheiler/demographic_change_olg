@@ -60,8 +60,9 @@ def build(ctx):
             ctx.path_to(ctx, "IN_MODEL_SPECS", "setup_general.json"),
         ],
         target=[
-            ctx.path_to(ctx, "OUT_DATA", "calibration.csv"),
-            ctx.path_to(ctx, "OUT_DATA", "life_expectancy.csv"),
+            ctx.path_to(ctx, "OUT_TABLES", "calibration.csv"),
+            ctx.path_to(ctx, "OUT_TABLES", "life_expectancy.csv"),
+            ctx.path_to(ctx, "OUT_TABLES", "results_stationary.csv"),
         ],
         name="create_tables",
     )

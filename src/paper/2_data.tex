@@ -16,24 +16,31 @@ The adjustment factors are chosen to produce the following features of populatio
     \item Constant population size: Fertility rates are set such that total mass of the population remains constant over time
 \end{itemize}
 
-Through basic experimentation, the following adjustment has been found that meets the above requirements reasonably well. For time indices zero to ten, survival rates remain constant. For time indices ten to 50, conditional year-to-year mortality rates are reduced every year by 2.5%. For time indices 51 to 70, mortality rates remain constant again at their respective time 50 levels. Table \ref{tab:life_expectancy} summarizes the resulting simulated life expectancies at different points in the transition.
+Through basic experimentation, the following adjustment has been found that meets the above requirements reasonably well. For time indices zero to ten, survival rates remain constant. For time indices five to 29, conditional year-to-year mortality rates are reduced every year by 5%. For time indices 30 to 55, mortality rates remain constant again at their respective time 30 levels. Table \ref{tab:life_expectancy} summarizes the resulting simulated life expectancies at different points in the transition.
 
 \begin{table}[ht]
-    \caption{Simulated life expectancy}
+    \caption{Simulated life expectancy and average HH age}
     \label{tab:life_expectancy}
     \centering
-    \begin{tabular}{l c c}
+    \begin{tabular}{l c c c}
         \hline \hline
-                            &at birth   & at retirement \\
+        & at birth & at retirement & average age \\
         \hline
-        before transition   &tbd        &tbd \\
-        at $t=20$           &tbd        &tbd \\
-        at $t=30$           &tbd        &tbd \\
-        at $t=40$           &tbd        &tbd \\
-        at $t=50$           &tbd        &tbd \\
-        at $t=60$           &tbd        &tbd \\
-        after transition    &tbd        &tbd \\
+        \csvreader[head to column names]{../../out/tables/life_expectancy.csv}{}
+        {\\\csvcoli&\csvcolii&\csvcoliii&\csvcoliv}
+        \\
         \hline \hline \\
     \end{tabular}
 \end{table}
 
+
+
+
+
+\begin{figure}
+    \label{fig:dependency_ratio}
+
+    \includegraphics[width=\textwidth]{../../out/figures/dependency_ratio.png}
+    \caption{Old-age dependency ratio resulting from simulated demographics}
+
+\end{figure}
