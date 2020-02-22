@@ -3,7 +3,6 @@
 
 def build(ctx):
 
-    pass
     # Solve for initial and final stationary equilibrium
     for model in ["initial", "final"]:
         ctx(
