@@ -26,11 +26,14 @@ def build(ctx):
             source="plot_stationary.py",
             deps=[
                 ctx.path_to(ctx, "IN_MODEL_SPECS", "setup_general.json"),
-                ctx.path_to(ctx, "IN_MODEL_SPECS", f"stationary_{model}.json"),
+                ctx.path_to(ctx, "OUT_ANALYSIS", f"stationary_{model}.pickle"),
             ],
-            target=ctx.path_to(ctx, "OUT_FIGURES", f"results_stationary_{model}.png"),
+            target=[
+                ctx.path_to(ctx, "OUT_FIGURES", f"aggregates_by_age_{model}.png"),
+                ctx.path_to(ctx, "OUT_FIGURES", f"lifecycle_profiles_{model}.png"),
+            ],
             append=f"{model} stationary equilibrium",
-            name=f"plot_results_stationary",
+            name=f"stationary_{model}",
         )
 
     # Produce plots for transition dynamics

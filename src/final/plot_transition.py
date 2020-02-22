@@ -22,13 +22,12 @@ with open(ppj("IN_MODEL_SPECS", "setup_general.json")) as json_file:
 with open(ppj("IN_MODEL_SPECS", "transition_constant_tax_rate.json")) as json_file:
     params_transition = json.load(json_file)
 
-with open(ppj("OUT_ANALYSIS", "transition.pickle"), "rb") as pickle_file:
+with open(ppj("OUT_ANALYSIS", f"transition.pickle"), "rb") as pickle_file:
     results_transition = pickle.load(pickle_file)
 
 age_max = np.int32(params_general["age_max"])
 age_retire = np.int32(params_general["age_retire"])
 duration_transition = np.int32(params_transition["duration_transition"])
-
 
 #####################################################
 # FUNCTIONS
@@ -43,7 +42,7 @@ def plot_transition():
     plot_y = np.array(
         [results_transition["aggregate_capital"], results_transition["aggregate_labor"]]
     )
-    legend = ["aggregate capital", "aggregate labor"]
+    legend = ["assets", "human capital"]
 
     # Create figure and plot
     fig, ax = plt.subplots()
