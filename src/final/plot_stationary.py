@@ -113,8 +113,8 @@ def plot_stationary(results):
     lines = line1 + line2
     labels = [line.get_label() for line in lines]
     ax1.legend(lines, (labels), loc=0)
-    ax1.set(xlabel="age", ylabel="assets", ybound=[0, 30.0])
-    ax2.set(ylabel="human capital", ybound=[0, 5.0])
+    ax1.set(xlabel="age", ylabel="assets", ybound=[0, capital_max])
+    ax2.set(ylabel="human capital", ybound=[0, hc_max])
 
     # Save figure
     fig.savefig(ppj("OUT_FIGURES", f"lifecycle_profiles_{model_name}.png"))

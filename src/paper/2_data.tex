@@ -1,7 +1,7 @@
 \section{Data}
 \label{sec:data}
 
-The age structure in the economy is not modelled directly, but as a consequence of birth rates and mortality rates. Demographic change is then induced by changing these rates. I apply an add-hoc adjustment that does not primarily aim for a realistic representation of the actual mechanisms governing fertility, migration and mortality rates, but instead seeks to replicate the qualitative features of population dynamics central to the analyses in \cite{LudwigSchelkleVogel2012} while keeping computation as simple as possible.
+The age structure in the economy is not modelled directly, but as a consequence of birth rates and mortality rates. Demographic change is then induced by changing these rates. I apply an add-hoc adjustment that does not primarily aim for a realistic representation of the actual mechanisms governing fertility, migration and mortality, but instead seeks to replicate the qualitative features of population dynamics central to the analyses in \cite{LudwigSchelkleVogel2012} while keeping computation as simple as possible.
 
 As the paper aims at analyzing both stationary equilibria as well as the transition dynamics that accompany the change in age structure in the population, individual mortality rates for all time indices are modelled. Initial mortality rates are taken from the Human Mortality Database (HMD). Mortality prior to entering the model is abstracted from (by implicitly setting conditional year-to-year mortality rates to zero for real ages prior to model entry). Furthermore, the conditional probability to survive beyond maximum model age is set to zero, irrespective of the time index. Changes in the age structure of the economy are then induced by iteratively adjusting mortality rates by age and time index.
 
@@ -33,7 +33,9 @@ Through basic experimentation, the following adjustment has been found that meet
     \end{tabular}
 \end{table}
 
+Naturally, the adjustment of the population age structure, indicated by average household age is lagging the shift in mortality rates: while the change in mortality rates is completed by period 30, the transition of the population continous throughout the model horizon. The observation that average household age decreases towards the end of the transition period is an artifact of the way population dynamics are modelled, namely the assumption of stationary population size, which results in an initial decrease of the fertility rate, followed by a subsequent rise in fertility, before settling at the new stationary rate. This secondary rise in fertility triggers a decrease in the average age of a household.
 
+The simulated OADR exhibits the core qualitative features of \citet{LudwigSchelkleVogel2012}: The ratio is initially relatively flat, then increases sharply for about 20 years and then begins to settles at a new level, with a very slight decrease at the end of the model horizon. The magnitude of the change in both the original paper and this paper is roughly 17 percentage points. Note that the scale of the OADR differs from this term paper to the original paper by \citet{LudwigSchelkleVogel2012}: while the ratio ranges between slightly below 20% and ca. 37% in the original paper, the OADR of the population used in this paper ranges between 28% and 45%. This mostly stems from the fact, that, in this paper, fertility rates are not estimated from data, but instead chosen such that the total mass of the population remains constant. While the level clearly plays a central role for quantitative treatments, it should play a minor role in qualitative assessments such as this. Figure \ref{fig:dependency_ratio} depicts the OADR resulting from the population dynamics simulated as described above.
 
 \begin{figure}
     \label{fig:dependency_ratio}
@@ -41,3 +43,4 @@ Through basic experimentation, the following adjustment has been found that meet
     \includegraphics[width=\textwidth]{../../out/figures/dependency_ratio.png}
     \caption{\textbf{Simulated old-age dependency ratio:} the dependency ratio is derived by simulating population dynamics based on adjusted conditional survival rates, starting from a stationary population distribution and calculating the ratio of the mass of retired households to the mass of working age households.}
 \end{figure}
+

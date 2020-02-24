@@ -1,9 +1,16 @@
 \section{Model}
 \label{sec:model}
 
-The core of this term project is to demonstrate the working of the human capital accumulation mechanism in light of demographic transitions.
+The core of this term project is to demonstrate the working of the human capital accumulation mechanism in light of demographic transitions. For this, I use a standard overlapping generations model with household heterogeneity by age. Household's maximize discounted lifetime utility from consumption by choosing between consumption, saving and effort invested in human capital accumulation in every model period subject to a budget constraint, borrowing constraint, time constraint and the human capital formation technology.
 
-Household's maximize discounted lifetime utility from consumption by
+Human capital is produced with a technology commonly used in the literature and first introduced by \cite{Ben-Porath1967}. Human capital next period is a function of the current level of human capital, $h_t$, and the effort exerted to produce additional human capital, $e_t$,
+$$ h_{t+1} = (1-\delta_h) h_t + \zeta (e_t h_t)^\psi$$
+where $\delta_h$ is the depreciation rate on human capital, $\zeta$ is a scaling factor capturing average learning ability and $\psi$ is the curvature parameter of the production technology.
+
+The model features neither idiosyncratic income risk, nor aggregate risk of any kind
+
+While abstracting from the labor-leisure choice, one key margin of adjustment of the household is disabled. The remaining trade-off in the labor supply decision solely consists of investing time in earning labor income versus investing time in accumulating / maintaining human capital for higher future productivity. On one hand, this substantially simplifies the computational problem and on the other hand, the labor-leisure trade-off is removed from the analysis, thus making clearer the role of endogenous human capital accumulation.
+
 
 In order to focus on the human capital accumulation mechanism, the following simplifying assumptions are made:
 \begin{itemize}
@@ -11,15 +18,11 @@ In order to focus on the human capital accumulation mechanism, the following sim
     \item \dots
 \end{itemize}
 
-While abstracting from the labor-leisure choice, one key margin of adjustment of the household is disabled. The remaining trade-off in the labor supply decision solely consists of investing time in earning labor income versus investing time in accumulating / maintaining human capital for higher future productivity. On one hand, this substantially simplifies the computational problem and on the other hand, the labor-leisure trade-off is removed from the analysis, thus making clearer the role of endogenous human capital accumulation.
-
 To further reduce the computational burden, the following simplifying assumptions are made:
 
 In contrast to the original paper by \cite{LudwigSchelkleVogel2012}, pension benefits are in this paper not linked to income histories. In other words, every retired agent qualifies for the same level of pension benefits. This simplifies computation substantially, especially
 
-Human capital is produced with a technology commonly used in the literature and first introduced by \cite{Ben-Porath1967}. Human capital next period is a function of the current level of human capital, $h_t$, and the effort exerted to produce additional human capital, $e_t$,
-$$ h_{t+1} = (1-\delta_h) h_t + \zeta (e_t h_t)^\psi$$
-where $\delta_h$ is the depreciation rate on human capital, $\zeta$ is a scaling factor capturing average learning ability and $\psi$ is the curvature parameter of the production technology.
+
 
 The household optimization problem in the stationary economy thus is
 \begin{align*}

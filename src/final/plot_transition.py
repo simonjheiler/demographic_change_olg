@@ -42,16 +42,18 @@ def plot_transition():
     plot_y = np.array(
         [results_transition["aggregate_capital"], results_transition["aggregate_labor"]]
     )
-    legend = ["assets", "human capital"]
 
     # Create figure and plot
-    fig, ax = plt.subplots()
-    for series in range(plot_y.shape[0]):
-        ax.plot(plot_x, plot_y[series, :])
-
-    # Format
-    ax.set(xlabel="transition period",)
-    ax.legend(legend)
+    fig = plt.figure()
+    ax1 = fig.add_subplot(111)
+    line1 = ax1.plot(plot_x, plot_y[0, :], color="tab:blue", label="assets")
+    ax2 = ax1.twinx()
+    line2 = ax2.plot(plot_x, plot_y[1, :], color="tab:orange", label="human capital")
+    lines = line1 + line2
+    labels = [line.get_label() for line in lines]
+    ax1.legend(lines, (labels), loc=0)
+    ax1.set(xlabel="transition period", ylabel="assets", ybound=[0, 15.0])
+    ax2.set(ylabel="human capital", ybound=[0, 2.5])
 
     # Save figure
     fig.savefig(ppj("OUT_FIGURES", "results_transition.png"))

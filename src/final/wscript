@@ -59,8 +59,10 @@ def build(ctx):
         features="run_py_script",
         source="create_tables.py",
         deps=[
-            ctx.path_to(ctx, "OUT_DATA", "simulated_demographics.pickle"),
             ctx.path_to(ctx, "IN_MODEL_SPECS", "setup_general.json"),
+            ctx.path_to(ctx, "OUT_DATA", "simulated_demographics.pickle"),
+            ctx.path_to(ctx, "OUT_ANALYSIS", "stationary_initial.pickle"),
+            ctx.path_to(ctx, "OUT_ANALYSIS", "stationary_final.pickle"),
         ],
         target=[
             ctx.path_to(ctx, "OUT_TABLES", "calibration.csv"),

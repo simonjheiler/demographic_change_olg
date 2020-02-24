@@ -38,13 +38,13 @@ def aggregate_baseline_readable(
             index on asset grid as int)
         policy_labor_working: np.array(n_prod_states, n_gridpoints_capital, duration_working)
             Labor supply policy function (storing optimal hours worked as np.float64)
-        age_max: int
+        age_max: np.int32
             Maximum age of agents
-        n_prod_states: int
+        n_prod_states: np.int32
             Number of idiosyncratic productivity states
-        n_gridpoints_capital: int
+        n_gridpoints_capital: np.int32
             Number of grid points of capital grid
-        duration_working: int
+        duration_working: np.int32
             Length of working period
         productivity_init: np.array(2, 1)
             Initial distribution of idiosyncratic productivity states
@@ -56,7 +56,7 @@ def aggregate_baseline_readable(
             Asset grid
         mass: np.array(age_max, 1)
             Vector of relative shares of agents by age
-        duration_retired: int
+        duration_retired: np.int32
             Length of retirement period
         population_growth_rate: np.float64
             Annual population growth rate
