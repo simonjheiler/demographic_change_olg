@@ -1,0 +1,115 @@
+\section{Results}
+\label{sec:results}
+
+This section summarizes the findings of the analysis. First, key qualitative features of initial and final stationary equilibrium are presented before moving to transitional dynamics between the two states.
+
+\subsection{Stationary equilibria}
+
+As outlined in section \ref{sec:data}, for both the initial and the final state, stationary age distributions are derived from the respective survival rates prior and post adjustment. These stationary populations and implied fertility rates are then used to solve and simulate the model. Table \ref{tab:stationary_aggregates} contains summary statistics of the two calibrations.
+
+\begin{table}[ht]
+    \caption{Stationary equilibria}
+    \label{tab:stationary_aggregates}
+    \centering
+    \begin{tabular}{l c c c c}
+        \hline \hline
+            &aggregate capital  & aggregate labor   & OADR  & pension benefits \\
+        \hline
+        \csvreader[head to column names]{../../out/tables/stationary_aggregagates.csv}{}
+        {\\\csvcoli&\csvcolii&\csvcoliii&\csvcoliv&\csvcolv}
+        \\
+        \hline \hline \\
+    \end{tabular}
+\end{table}
+
+As can be seen, the change in age structure, while keeping the population size constant, translates into an increase of the old-age dependency ratio and a decrease in pension benefits. At the same time, higher life expectancy raises the need for retirement savings, which results in a larger capital stock in the post-transition economy. In the framework presented in this paper, households do not value leisure, which means that households will invest their entire time endowment in either human capital maintenance / accumulation or labor supply. The labor supply decision and the human capital investment decision are therefore directly linked and changes in labor supply arise from investing in or maintaining higher human capital levels (given that human capital depreciation is assumed to be equal in both economies).
+
+Figure \ref{fig:lifecycle_profiles} plots asset holdings and human capital level of the representative household over the lifecycle (assuming the household survives until the maximum age) for initial and final stationary equilibrium.
+
+\begin{figure}[ht]
+    \centering
+    \figuretitle{Lifecycle profiles}
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../../out/figures/lifecycle_profiles_initial.png}
+        \caption{Initial stationary equilibrium}
+        \label{fig:lifecycle_profiles_initial}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../../out/figures/lifecycle_profiles_final.png}
+        \caption{Final stationary equilibrium}
+        \label{fig:lifecycle_profiles_final}
+    \end{subfigure}
+    \caption{\textbf{Lifecycle profiles:} Optimal household asset holdings and human capital levels derived from policy functions}
+    \label{fig:lifecycle_profiles}
+\end{figure}
+
+As is apparent from the graph, in both economies, households initially invest in human capital before .
+
+The rigged part of the asset profiles is an artifact of the chosen grid structure and solution method. Moving to finer grids or interpolating in between grid points for solution should remove these patterns, while leaving the overall shape of the profiles unaltered.
+
+Inequality w.r.t. to income and asset holdings is lower in the initial economy compared to the final state. The Gini coefficient for household income increases from X to Y and for asset holdings increases from Z to ZZ. Table \ref{tab:stationary_inequality} contains some summary statistics on inequality for the two stationary calibrations.
+
+\begin{table}[ht]
+    \caption{Stationary equilibria}
+    \label{tab:stationary_inequality}
+    \centering
+    \begin{tabular}{l c c c c}
+        \hline \hline
+            & \multicolumn{4}{c}{Income} & \multicolumn{4}{c}{Human capital} & \multicolumn{4}{c}{Wealth} \\
+            &25%  &50% &75% & Gini &25%  &50% &75% & Gini &25%  &50% &75% & Gini \\
+        \hline
+        \csvreader[head to column names]{../../out/tables/stationary_inequality.csv}{}
+        {\\\csvcoli&\csvcolii&\csvcoliii&\csvcoliv&\csvcolv}
+        \\
+        \hline \hline \\
+    \end{tabular}
+\end{table}
+
+
+\subsection{Transitional dynamics}
+
+Next,
+
+
+\begin{table}[ht]
+    \caption{Transitional dynamics}
+    \label{tab:transition_summary}
+    \centering
+    \begin{tabular}{l c c c c}
+        \hline \hline
+            &aggregate capital  & aggregate labor   & OADR  & pension benefits \\
+        \hline
+        \csvreader[head to column names]{../../out/tables/results_stationary.csv}{}
+        {\\\csvcoli&\csvcolii&\csvcoliii&\csvcoliv&\csvcolv}
+        \\
+        \hline \hline \\
+    \end{tabular}
+\end{table}
+
+
+
+\begin{figure}
+    \label{fig:transition_aggregates}
+    \figuretitle{Transitional dynamics}
+    \includegraphics[width=\textwidth]{../../out/figures/results_transition.png}
+    \caption{Transition paths of aggregate variables}
+\end{figure}
+
+
+\begin{table}[ht]
+    \caption{Transitional dynamics}
+    \label{tab:transition_summary}
+    \centering
+    \begin{tabular}{l c c c c}
+        \hline \hline
+            &aggregate capital  & aggregate labor   & OADR  & pension benefits \\
+        \hline
+        \csvreader[head to column names]{../../out/tables/results_stationary.csv}{}
+        {\\\csvcoli&\csvcolii&\csvcoliii&\csvcoliv&\csvcolv}
+        \\
+        \hline \hline \\
+    \end{tabular}
+\end{table}

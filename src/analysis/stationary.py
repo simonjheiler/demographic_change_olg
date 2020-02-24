@@ -85,7 +85,6 @@ def solve_stationary(params):
     setup_name = params["setup_name"]
 
     survival_rates = demographics[f"survival_rates_{setup_name}"]
-    population_growth_rate = demographics[f"fertility_{setup_name}"] - 1
     mass = demographics[f"mass_{setup_name}"]
 
     aggregate_capital_in = params["aggregate_capital_init"]
@@ -303,7 +302,6 @@ def solve_stationary(params):
             assets_init_weights=assets_init_weights,
             hc_init_gridpoints=hc_init_gridpoints,
             hc_init_weights=hc_init_weights,
-            population_growth_rate=population_growth_rate,
             survival_rates=survival_rates,
             efficiency=efficiency,
             mass_newborns=mass[0],
@@ -396,6 +394,7 @@ def solve_stationary(params):
 if __name__ == "__main__":
 
     model_name = sys.argv[1]
+    # model_name = "final"
 
     model_specs = json.load(
         open(ppj("IN_MODEL_SPECS", f"stationary_{model_name}.json"), encoding="utf-8")

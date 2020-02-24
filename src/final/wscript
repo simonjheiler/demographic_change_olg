@@ -67,7 +67,8 @@ def build(ctx):
         target=[
             ctx.path_to(ctx, "OUT_TABLES", "calibration.csv"),
             ctx.path_to(ctx, "OUT_TABLES", "life_expectancy.csv"),
-            ctx.path_to(ctx, "OUT_TABLES", "results_stationary.csv"),
+            ctx.path_to(ctx, "OUT_TABLES", "stationary_aggregates.csv"),
+            ctx.path_to(ctx, "OUT_TABLES", "stationary_inequality.csv"),
         ],
         name="create_tables",
     )
