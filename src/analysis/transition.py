@@ -84,6 +84,45 @@ duration_working = age_retire - 1
 def solve_transition(
     results_initial, results_final, transition_params,
 ):
+    """Solve for equilibrium transitional dynamics.
+
+    Solve for sets of value functions, policy functions and cross-sectional distributions
+    of agents. First, guess initial path for aggregate capital and aggregate labor. Second,
+    iterate backwards over time with the following steps: calculate factor prices, solve
+    for current period optimal choices for assets and human capital (for all ages) given
+    next periods value function (for all ages) by calculate sum of flow utility and expected
+    discounted continuation value on meshgrids for all possible combinations for assets and
+    human capital this period  and next period, then find maximal value over assets and human
+    capital next period. After deriving policies for all time periods, initiate with cross-
+    sectional distribution of initial stationary equilibrium and iterate forward over policy
+    functions to obtain cross-sectional distributions for all time periods. Finally, aggregate
+    over households to obtain transition paths for aggregate variables and verify initial guess.
+    If tolerance for deviation is exceeded, update guess and repeat.
+
+    Arguments:
+        results_initial: dictionary
+            Equilibrium results for the initial stationary equilibrium containing
+            the variables "aggregate_capital", "aggregate_labor", "wage_rate", "interest_rate",
+            "pension_benefit", "policy_capital_working", "policy_hc_working",
+            "policy_labor_working", "policy_capital_retired", "value_retired", "value_working",
+            "mass_distribution_full_working", and "mass_distribution_full_retired"
+        results_final: dictionary
+            Equilibrium results for the final stationary equilibrium containing
+            the variables "aggregate_capital", "aggregate_labor", "wage_rate", "interest_rate",
+            "pension_benefit", "policy_capital_working", "policy_hc_working",
+            "policy_labor_working", "policy_capital_retired", "value_retired", "value_working",
+            "mass_distribution_full_working", and "mass_distribution_full_retired"
+        transition_params: dictionary
+            Model specifications containing the variables "duration_transition",
+            "mortality_adjustment_start_time", "mortality_adjustment_end_time",
+            "mortality_adjustment_factor", "aggregate_capital_init", and "aggregate_labor_init"
+    Returns:
+        results: dictionary
+            Transitional equilibrium results containing the variables "aggregate_capital",
+            "aggregate_labor", "value_working", "value_retired", "policy_capital_working",
+            "policy_hc_working", "policy_labor_working", "policy_capital_retired",
+            "mass_distribution_full_working", and "mass_distribution_full_retired"
+    """
 
     # Load final steady state
     aggregate_capital_final = results_final["aggregate_capital"]

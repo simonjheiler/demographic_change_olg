@@ -1,7 +1,69 @@
 \section{Computation}
 \label{sec:computation}
 
-Human capital is discretized on a logarithmic grid with bounds $[1.0, 5.0]$ with 20 grid points.
-Capital is discretized on a linear grid with bounds $[0.001, 30.0]$ with 60 grid points.
+\subsection{Stationary equilibrium}
 
-The tolerance level for deviations in aggregate capital and aggregate labor are set to $10e-5$, both for computation of stationary equilibria and transitional dynamics.
+The solution algorithm used to solve for stationary equilibria consists of the following steps:
+\begin{enumerate}
+    \item Guess initial levels of aggregate capital and aggregate labor
+    \item derive factor prices from firm FOCs
+    \item calculate pension benefits from aggregate labor supply and the government budget constraint
+    \item Solve for household value functions and policy functions by backward induction
+        \begin{enumerate}
+            \item Start with maximum age; value function equals flow utility from consuming all available resources
+            \item Iterate backwards over ages and solve using continuation values from the next age
+                \begin{enumerate}
+                    \item Define meshgrids for current assets, next period assets, current human capital and next period human capital
+                    \item Calculate consumption, human capital effort and flow utility on meshgrid
+                    \item Extract continuation values by next period assets and next period human capital from value functions of time period $t+1$
+                    \item Calculate sum of flow utility and expected discounted continuation value on meshgrids
+                    \item Find maximal value over assets and human capital next period
+                \end{enumerate}
+            \item Store value function and policy for all ages
+        \end{enumerate}
+    \item Simulate cross-sectional distribution of households by asset holdings, human capital and age
+        \begin{enumerate}
+            \item Initiate with initial mass of household at initial levels of assets and human capital
+            \item Iterate forward over policy functions to obtain cross-sectional distribution
+        \end{enumerate}
+    \item Aggregate over households to obtain aggregate variables
+    \item Verify initial guess; If tolerance for deviation is exceeded, update guess and repeat.
+\end{enumerate}
+
+\subsection{Transitional dynamics}
+
+The solution algorithm used to solve for transitional dynamics consists of the following steps:
+\begin{enumerate}
+    \item Guess initial path for aggregate capital and aggregate labor
+    \item Derive factor prices from firm FOCs
+    \item Calculate pension benefits from aggregate labor supply and the government budget constraint
+    \item Solve for household value functions and policy functions by backward induction for all age and all time periods
+        \begin{enumerate}
+            \item Start with the final period $T$ and use as continuation values for all ages the value functions of the final stationary equilibrium
+            \item Iterate backwards through time periods and derive value functions and optimal policies
+                \begin{enumerate}
+                    \item Define meshgrids for current assets, next period assets, current human capital and next period human capital
+                    \item Calculate consumption, human capital effort and flow utility on meshgrid
+                    \item Extract continuation values by next period assets and next period human capital from value functions of time period $t+1$
+                    \item Calculate sum of flow utility and expected discounted continuation value on meshgrids
+                    \item Find maximal value over assets and human capital next period
+                \end{enumerate}
+            \item Store policies and value functions for all ages and all time periods
+        \end{enumerate}
+    \item Simulate cross-sectional distribution of households by asset holdings, human capital and age over time
+        \begin{enumerate}
+            \item Start with cross-sectional distribution from initial stationary equilibrium
+            \item Iterate forward over policy functions of the respective time period to obtain cross-sectional distribution of the following time period
+        \end{enumerate}
+    \item Aggregate over households to obtain paths aggregate variables
+    \item Verify initial guess; If tolerance for deviation is exceeded, update guess and repeat.
+\end{enumerate}
+
+\subsection{parametrization}
+
+The following parameters are used for computation:
+\begin{itemize}
+    \item Asset holdings are discretized on a linear grid with bounds $[0.001, 30.0]$ with 60 grid points
+    \item Human capital is discretized on a logarithmic grid with bounds $[1.0, 5.0]$ with 20 grid points
+    \item The tolerance level for deviations in aggregate capital and aggregate labor are set to $10^-5$ for computation of stationary equilibria and to $10^-3$ for the computation of transitional dynamics.
+\end{itemize}

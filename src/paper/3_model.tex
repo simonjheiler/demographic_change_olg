@@ -1,6 +1,8 @@
 \section{Model}
 \label{sec:model}
 
+\subsection{Model components}
+
 The core of this term project is to demonstrate the working of the human capital accumulation mechanism in light of demographic transitions. For this, I use a standard overlapping generations model with household heterogeneity by age. Household's maximize discounted lifetime utility from consumption by choosing between consumption, saving and effort invested in human capital accumulation in every model period subject to a budget constraint, borrowing constraint, time constraint and the human capital formation technology.
 
 Human capital is produced with a technology commonly used in the literature and first introduced by \cite{Ben-Porath1967}. Human capital next period is a function of the current level of human capital, $h_t$, and the effort exerted to produce additional human capital, $e_t$,
@@ -9,13 +11,17 @@ where $\delta_h$ is the depreciation rate on human capital, $\zeta$ is a scaling
 
 The model features neither idiosyncratic income risk, nor aggregate risk of any kind, i.e. the only risk households are facing is mortality risk. Households are assumed to have perfect foresight regarding survival and idiosyncratic survival risk washes out in the aggregate. Accidental bequests, i.e. asset holdings of deceased households are taxed 100% and spent on non-productive government expenditures. The latter is a deviation from the framework in \citet{LudwigSchelkleVogel2012}, where accidental bequests are redistributed to households via transfers. While altering the budget constraint of households, the  assumption taken for this term paper simplifies computation. In the original framework, income from transfers affects the consumption/ savings/ investment decision and, therefore, the level of accidental bequests. In effect, transfers act as an additional variable (next to aggregate capital, aggregate labor and pension benefits), that needs to be first guessed as input and then verified as results of aggregation. Thus, (wasteful) spending of tax revenue from accidental bequests removes one equlibrium condition.
 
-In contrast to the original paper by \cite{LudwigSchelkleVogel2012}, pension benefits are in this paper not linked to income histories. In other words, every retired agent qualifies for the same level of pension benefits. While the level of pension benefits remains an aggregate variable to be solved for by guess and verify, this assumption simplifies computation, as it is no longer necessary to keep track of a households earnings history to calculate pension benefit claims, effectively eliminating a state variable from the household problem. In the specific model used here, the difference is not too material, as in the absence of idiosyncratic risk other than mortality risk, all households of a given age are identical in their earnings history. However, this simplifying assumption becomes truly relevent when introducing idiosyncratic income risk to the model.
+In contrast to the original paper by \cite{LudwigSchelkleVogel2012}, pension benefits are in this paper not linked to income histories. In other words, every retired agent qualifies for the same level of pension benefits. While the level of pension benefits remains an aggregate variable to be solved for by guess and verify, this assumption simplifies computation, as it is no longer necessary to keep track of a households earnings history to calculate pension benefit claims, effectively eliminating a state variable from the household problem. In the specific model used here, the difference is not too material, as in the absence of idiosyncratic risk other than mortality risk, all households of a given age are identical in their earnings history. However, this simplifying assumption becomes truly relevent when introducing idiosyncratic income risk to the model. Pension benefits are thus given by
+$$ b_j = \begin{cases}
+				0 \;\text{if}\; j<J^r \\
+                \bar{b} \;\text{if}\; J^r \leq j \leq J \\
+			\end{cases} $$
 
 In line with \citet{LudwigSchelkleVogel2012}, households derive utility from consumption and do not have a bequest motive. Contrasting the original framework, I assume that households do not derive utility from leisure. This, in turn, means that households will use their entire time endowment to either earn income in the labor market or invest in accumulating human capital. While abstracting from the labor-leisure choice, one key margin of adjustment for the household in light of a changing environment is disabled. The remaining trade-off in the labor supply decision solely consists of investing time in earning labor income versus investing time in accumulating / maintaining human capital for higher future productivity. On one hand, this substantially simplifies the computational problem and on the other hand, the labor-leisure trade-off is removed from the analysis, thus making clearer the role of endogenous human capital accumulation.
 
-Households face a zero borrowing limit and the minimum level of human capital is assumed to be zero (the latter will not be binding during working age due to the assumption on the human capital formation technology). Finally, households take factor prices for capital and labor, as well as the level of pension benefits as given
+Households offer capital and labor at competitive markets and earn interest rate $\bar{r}$ on physical capital and wage rate $\bar{w}$ on effective labor supply $(1-e_j) z_j$, where $z_j$ is the fixed and exogenous age-dependent labor efficiency multiplier. Moreover, households face a zero borrowing limit and the minimum level of human capital is assumed to be zero (the latter will not be binding during working age due to the assumption on the human capital formation technology). Finally, households take factor prices for capital and labor, as well as the level of pension benefits as given
 
-\subsection{Stationary equilibrium}
+The model is closed by a continuum of firms that rent out capital and labor on perfectly competitive input markets and produce the final output good using an identical Cobb-Douglas production function.
 
 The household optimization problem in the stationary economy is given by
 \begin{align*}
@@ -28,38 +34,67 @@ The household optimization problem in the stationary economy is given by
                     & a_0, h_0 \;\text{given}
 \end{align*}
 
-The model is closed by a continuum of firms that rent out capital and labor on perfectly competitive input markets and produce the final output good using an identical Cobb-Douglas production function.
+The household problem can be rewritten recursively, which yields an equivalent optimal programming problem given by a set of value functions $\{V_j(a, h)\}_{j=0}^J$ defined by
+\begin{align*}
+    V_j (a, h) = \max_{ \{c, e, a', h' \} } & [ u(c) + \beta \pi_{j, j+1} V_{j+1} (a', h') ]  \\
+    \text{s.t.} \;  & c + a' = (1+\bar{r}) a + (1-\tau) (1-e) z_j h + b_j \\
+                    & h' = (1-\delta_h) h + \zeta (e h)^\psi \\
+                    & a' \leq 0 \\
+                    & h' \leq 0 \\
+                    & e \in [0, 1]
+\end{align*}
+for all $j=0, \dots, J$. Note that two of the four choice variables $\{c, e, a', h' \}$ can be substituted out using the budget constraint and the human capital accumulation equation.
 
-A stationary equilibrium in this economy is described by the following elements:
+\subsection{Equilibrium definition}
+
+Using the reduced recursive characterization of the household problem, a stationary equilibrium in this economy is described by
 \begin{enumerate}
-    \item Sequences of consumption, physical and human capital by household age $\{c_{j}, a_{j+1}, h_{j+1} \}_{j=0}^{J} $
-    \item Factor prices $r, w$
+    \item Sets of policy functions for physical and human capital by household age $\{a'_{j}(a, h), h'_{j}(a, h) \}_{j=0}^{J}$
+    \item Factor prices $\bar{r}, \bar{w}$ and pension benefit level $\bar{b}$
 \end{enumerate}
 such that the following conditions hold:
 \begin{enumerate}
-    \item Household behave optimally at every age, given factor prices, i.e. the sequences for consumption, physical and human capital maximize expected discounted lifetime utility
+    \item The policy functions solve the functional equations of the household problem for all ages $j=0, \dots, J$
+    \item Firms behave optimally in every period
     \item Government budget balances
+        $$ \tau \bar{w} \sum_{j=0}^{J^r-1} (1 - e_j) h_{j} N_j = \rho \sum_{j=J^r}^J N_{j} b_{j} $$
     \item Factor markets clear
+        $$ K^D = \sum_{j=0}^{J} a_j \quad\text{and}\quad L^D = \sum_{j=0}^{J^r-1} (1 - e_j) z_j $$
 \end{enumerate}
-
-In the
-
-\subsection{Transitional dynamics}
 
 To assess the transition from one stationary equilibrium to another, the time dimension is introduced to the model. Population dynamics are no longer assumed to be time invariant and, as a consequence, neither will be factor prices and household policy functions. For further analysis, I first provide an equilibrium definition.
 
-An equilibrium in the economy with transitional dynamics is given by:
+%An equilibrium in the economy with transitional dynamics is given by:
+%\begin{enumerate}
+%    \item Sequences of sets of policy functions for physical and human capital by household age and time $\{ \{c_{j, t}, a_{j+1, t+1}, h_{j+1, t+1} \}_{j=0}^{J} \}_{t=0}^{\infty}$
+%    \item Sequences of aggregate variables $\{L_t, K_{t+1}, Y_t \}_{t=0}^{\infty}$
+%    \item Sequences of factor prices $\{r_t, w_t \}_{t=0}^{\infty}$ and pension benefit levels $\{b_t\}_{t=0}^{\infty}$
+%\end{enumerate}
+%such that the following conditions hold:
+%\begin{enumerate}
+%    \item The policy functions solve the functional equations of the household problem for all ages $j=0, \dots, J$ and all times $t=0, \dots$
+%    \item Firms behave optimally in every period
+%    \item Government budget balances in every period
+%    \item Factor markets (labor, capital, and output) clear in every period
+%    \item The initial state of the economy constitutes a stationary equilibrium
+%    \item The system converges to a stationary equilibrium, i.e. the limits w.r.t. time $t$ of factor prices and policy functions exist and constitute a stationary equilibrium
+%        constitute
+%\end{enumerate}
+%
+%The economy with transitional dynamics described above does not have a closed form solution, which means that numerical methods are required to solve it. Thus, for computational reasons, it is not feasible to %solve for the exact equilibrium, which motivates the following definition.
+
+An equilibrium in the economy with transitional dynamics is given by some finite time $T$ and:
 \begin{enumerate}
-    \item Sequences of consumption, physical and human capital by household age and time $\{ \{c_{j, t}, a_{j+1, t+1}, h_{j+1, t+1} \}_{j=0}^{J} \}_{t=0}^{\infty}$
-    \item Sequences of factor prices $\{r_t, w_t \}_{t=0}^{\infty}$
+    \item Sequences of sets of policy functions for physical and human capital by household age and time $\{ \{c_{j, t}, a_{j+1, t+1}, h_{j+1, t+1} \}_{j=0}^{J} \}_{t=0}^{T}$
+    \item Sequences of aggregate variables $\{L_t, K_{t+1}, Y_t \}_{t=0}^{T}$
+    \item Sequences of factor prices $\{r_t, w_t \}_{t=0}^{T}$ and pension benefit levels $\{b_t\}_{t=0}^{T}$
 \end{enumerate}
 such that the following conditions hold:
 \begin{enumerate}
-    \item Household behave optimally in every period given the sequence of factor prices, i.e. the sequences for consumption, physical and human capital maximize expected discounted lifetime utility
+    \item The policy functions solve the functional equations of the household problem for all ages $j=0, \dots, J$ and all times $t=0, \dots$
+    \item Firms behave optimally in every period
     \item Government budget balances in every period
-    \item Factor markets clear in every period
-    \item The initial state of the economy constitutes a stationary equilibrium
-    \item The system converges to a stationary equilibrium, i.e. the limits w.r.t. time $t$ of factor prices and policy functions exist and constitute a stationary equilibrium
-        constitute
+    \item Factor markets (labor, capital, and output) clear in every period
+    \item The initial state (at $t=0$) and the final state (at $t=T$) of the economy approximately constitute a stationary equilibrium
 \end{enumerate}
-
+where the latter statement is interpreted in a numerical manner, i.e. up to a pre-specified tolerance level for the market clearing conditions.

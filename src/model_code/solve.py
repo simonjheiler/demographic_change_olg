@@ -31,10 +31,10 @@ def solve_retired(
     over possible choices given states.
 
     Arguments:
-        assets_this_period:
-            ...
-        assets_next_period:
-            ...
+        assets_this_period: np.array(n_gridpoints_capital, n_gridpoints_capital)
+            Meshgrid of this periods asset holdings
+        assets_next_period: np.array(n_gridpoints_capital, n_gridpoints_capital)
+            Meshgrid of next periods asset holdings
         interest_rate: np.float64
             Current interest rate on capital holdings
         pension_benefit: np.float64
@@ -45,44 +45,19 @@ def solve_retired(
             Weight of consumption utility vs. leisure utility
         sigma: np.float64
             Inverse of inter-temporal elasticity of substitution
-        neg:
-            ...
-        continuation_value:
-            ...
-        survival_rate:
-            ...
+        neg: np.float64
+            Very small number
+        continuation_value: np.array(n_gridpoints_capital, n_gridpoints_capital)
+            Meshgrid of continuation value from next period asset and human capital
+            level
+        survival_rate: np.float64
+            Conditional year-to-year survival rate for the current age
     Returns:
-        value_retired_tmp:
-            ...
+        value_retired_tmp: np.array(n_gridpoints_capital)
+            Value function for agents of given age induced by optimal choices
         policy_capital_retired_tmp: np.array(n_gridpoints_hc, duration_retired)
             Savings policy function for retired agents (storing optimal asset choices
             by index on asset grid as int)
-
-
-
-        hc_grid: np.array(n_gridpoints_hc)
-            Human capital grid
-        n_gridpoints_hc: np.int32
-            Number of grid points of human capital grid
-        neg: np.float64
-            Very small number
-        age_max: np.int32
-            Maximum age of agents
-        age_retire: np.int32
-            Retirement age of agents
-        income_tax_rate: np.float64
-            Tax rate on labor income
-        zeta: np.float64
-            Scaling factor (average learning ability)
-        psi: np.float64
-            Curvature parameter of hc formation technology
-        delta_hc: np.float64
-            Depreciation rate on human capital
-        efficiency: np.array(age_retire)
-            Profile of age-dependent labor efficiency multipliers
-    Returns:
-
-
     """
     # Consumption
     consumption = get_consumption(
@@ -147,44 +122,50 @@ def solve_working(
     over possible choices for assets and human capital next period given states.
 
     Arguments:
-        assets_this_period: ...
-            ...
-        assets_next_period: ...
-            ...
-        hc_this_period: ...
-            ...
-        hc_next_period: ...
-            ...
-        interest_rate: ...
-            ...
-        wage_rate: ...
-            ...
-        income_tax_rate: ...
-            ...
-        beta: ...
-            ...
-        gamma: ...
-            ...
-        sigma: ...
-            ...
-        neg: ...
-            ...
-        continuation_value: ...
-            ...
-        delta_hc: ...
-            ...
-        zeta: ...
-            ...
-        psi: ...
-            ...
-        n_gridpoints_capital: ...
-            ...
-        n_gridpoints_hc: ...
-            ...
-        efficiency: ...
-            ...
-        survival_rate: ...
-            ...
+        assets_this_period: np.array(n_gridpoints_capital, n_gridpoints_capital,
+            n_gridpoints_hc, n_gridpoints_hc)
+            Meshgrid of this periods asset holdings
+        assets_next_period: np.array(n_gridpoints_capital, n_gridpoints_capital,
+            n_gridpoints_hc, n_gridpoints_hc)
+            Meshgrid of next periods asset holdings
+        hc_this_period: np.array(n_gridpoints_capital, n_gridpoints_capital,
+            n_gridpoints_hc, n_gridpoints_hc)
+            Meshgrid of this periods human capital level
+        hc_next_period: np.array(n_gridpoints_capital, n_gridpoints_capital,
+            n_gridpoints_hc, n_gridpoints_hc)
+            Meshgrid of next periods human capital level
+        interest_rate: np.float64
+            Current interest rate on capital holdings
+        wage_rate: np.float64
+            Current wage rate on effective labor supply
+        income_tax_rate: np.float64
+            Tax rate on labor income
+        beta: np.float64
+            Time discount factor
+        gamma: np.float64
+            Weight of consumption utility vs. leisure utility
+        sigma: np.float64
+            Inverse of inter-temporal elasticity of substitution
+        neg: np.float64
+            Very small number
+        continuation_value: np.array(n_gridpoints_capital, n_gridpoints_capital,
+            n_gridpoints_hc, n_gridpoints_hc)
+            Meshgrid of continuation value from next period asset and human capital
+            level
+        delta_hc: np.float64
+            Depreciation rate on human capital
+        zeta: np.float64
+            Scaling factor (average learning ability)
+        psi: np.float64
+            Curvature parameter of hc formation technology
+        n_gridpoints_capital: np.int32
+            Number of grid points of asset grid
+        n_gridpoints_hc: np.int32
+            Number of grid points of human capital grid
+        efficiency: np.float64
+            Current level of age-dependent labor efficiency multiplier
+        survival_rate: np.float64
+            Conditional year-to-year survival rate for the current age
     Returns:
         policy_capital_working_tmp: np.array(n_gridpoints_capital, n_gridpoints_hc)
             Savings policy function for agents of given age (storing optimal asset

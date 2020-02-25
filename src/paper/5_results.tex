@@ -46,9 +46,7 @@ Figure \ref{fig:lifecycle_profiles} plots asset holdings and human capital level
     \label{fig:lifecycle_profiles}
 \end{figure}
 
-As is apparent from the graph, in both economies, households initially invest in human capital before .
-
-The rigged part of the asset profiles is an artifact of the chosen grid structure and solution method. Moving to finer grids or interpolating in between grid points for solution should remove these patterns, while leaving the overall shape of the profiles unaltered.
+As is apparent from the graph, in both economies, households initially invest in human capital before accumulating capital for retirement. The rigged part of the asset profiles is an artifact of the chosen grid structure and solution method. Moving to finer grids or interpolating in between grid points for solution should remove these patterns, while leaving the overall shape of the profiles unaltered. As expected, agents in the final stationary equilibrium accumulate more of both physical and human capital in light of (i) longer expected retirement duration and (ii) lower replacement rates due to higher dependency rates.
 
 Inequality w.r.t. to income and asset holdings is lower in the initial economy compared to the final state. The Gini coefficient for household income increases from X to Y and for asset holdings increases from Z to ZZ. Table \ref{tab:stationary_inequality} contains some summary statistics on inequality for the two stationary calibrations.
 
@@ -71,17 +69,7 @@ py\end{table}
 
 \subsection{Transitional dynamics}
 
-Next,
-
-
-
-\begin{figure}
-    \label{fig:transition_aggregates}
-    \figuretitle{Transitional dynamics}
-    \includegraphics[width=\textwidth]{../../out/figures/results_transition.png}
-    \caption{Transition paths of aggregate variables}
-\end{figure}
-
+Moving to transitional dynamics, we observe that the transition path we obtain from the simulation is not monotone (cf. figure \ref{fig:transition_aggregates}). This is likely driven by an insufficiently long transition period.
 
 \begin{table}[ht]
     \caption{Transitional dynamics}

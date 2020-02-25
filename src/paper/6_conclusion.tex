@@ -1,4 +1,45 @@
-\section{Conclusion}
+\section{Conclusion and extensions}
 \label{sec:conclusion}
 
-\dots
+We have seen that the model is capable of reproducing core qualitative features of the original work by \citet{LudwigSchelkleVogel2012}.
+
+\Cite{LudwigSchelkleVogel2012} assess the role of endogenous human capital accumulation as a means to mitigate the adverse effects of demographic change on households born later. They carefully model the trade-off between consumption, saving, investing in human capital and enjoying leisure, in order to incorporate all relevant margins of adjustment available to the household throughout the working age. They examine alternative policy schemes, constant income tax rate and constant replacement rate, to cover the different ways in which the policy maker might react to the changing environment. Yet, one key parameter remains exogenous and fixed in their analyses: all households retire at a given age.
+
+One dimension in which the framework could be extended is therefore to take a closer look at the retirement decision. There are numerous ways of doing so: In addition to the policy schemes analysed in \cite{LudwigSchelkleVogel2012}, the policy maker could decide about moving retirement age, while keeping retirement mandated from the government. Alternatively,
+
+In the absence of any idiosyncratic risk, all households of a given cohort will take the same retirement decision. While interesting insights might already be generated from this setting, a more realistic framework required some heterogeneity in the retirement decision. This may achieved by different modelling approaches, for instance through idiosyncratic risk (e.g. income risk or health risk) or through preference heterogeneity (e.g. household types with different time discount factors).
+
+My proposed extension of the framework would therefore consist of the following:
+\begin{itemize}
+    \item Households face idiosyncratic labor productivity risk (employment risk); they are partly insured against this through public unemployment insurance
+    \item Households observe their productivity state (and hence their wage offer) and then decide
+        \begin{itemize}
+            \item how much labor to supply at the labor market
+            \item how much effort to exert on human capital accumulation
+            \item how much out of available resources to consume
+            \item how much out of available resources to save in assets
+        \end{itemize}
+    \item While working (and paying labor income tax), households accumulate claims to pension benefits
+    \item Instead of a fixed retirement age for all households, the policy maker sets an age bracket in which households endogenously decide whether to claim the pension benefits already accumulated or whether to continue working and acquire additional
+    \item The age bracket can be adjusted over time, e.g. moving from an initial retirement period from age 60 to age 70 to a retirement period from age 65 to age 75 in the final period
+    \item The policy maker guarantees a consumption floor for all retirees; above that, benefit levels are linked to accumulated claims, i.e. average past earnings and years worked
+\end{itemize}
+
+Given the complexity of the proposed model, the first step is to solve for stationary equilibria. For this, the following adjustments to the solution algorithm would be required:
+\begin{itemize}
+    \item As in the original model, labor supply is again endogenous, i.e. optimal labor supply needs to be solved for; this can be achieved by equating the marginal utility from leisure with the marginal utility from consumption first first and then solving for time spent on human capital accumulation and working
+    \item The idiosyncratic productivity state is a stochastic state variable
+    \item Average past earnings and years worked define the level of pension benefits to which a household is eligible; when counting periods of low productivity (unemployment) as working periods, average past earning and age are sufficient to describe acquired pension benefits and average past earnings need to be introduced as state variable; if unemployment spells do not generate pension benefit claims, the number of years worked needs to be introduced as additional state
+    \item For the retirement period (i.e. the age bracket in which a household can decide whether to retire or not), two separate sets of value function need to be calculated: the value of being retired and the value of not being retired; from the comparison of these values, the household policy regarding the retirement decision is derived
+    \item In equilibrium, the government budgets for unemployment insurance and for the public pension system need to balance individually
+\end{itemize}
+
+Clearly, for any of the above, the computational performance of the current implementation of the solution algorithm needs to improved substantially. While being remarkably robust, grid search algorithms are inherently imprecise and, especially with more than one asset, tremendously slow. There is a vast variety of alternative solution methods available from the literature, both for solving the household problem as well as for iterating over "guessing and verifying" aggregates or paths of aggregates.
+
+One method particularly suited to solve the household problem within the proposed framework is the endogenous grid method. While the implementation is, in light of the numerous constraints, not at all trivial, the computational performance should be far superior, as information from first oder conditions is exploited and interpolation and root finding is kept at a minimum.
+
+The "outer loop" of the model, i.e. finding aggregates such that all equilibrium conditions are met, can be interpreted as finding the root of an "equilibrium function" that measures the distance between the "guess" on which solution is based and the "verification" that results from simulating the solved model. In particular for the updating step, numerous root-finding algorithms are particularly powerful, such as (quasi-)Newton methods, that exploit information from derivatives of the "equilibrium function" (either by calculating or by approximating derivatives).
+
+The combination of speeding up an individual iteration of the backward solution / forward simulation step and requiring less steps in total by applying more advanced root-finding algorithms should tremendously improve the computation time required to solve the model for a given calibration, enabling both increased model complexity through rich features and accuracy through sufficiently dense grids and sufficiently long time horizons.
+
+If all of the above can be achieved, there additional extensions of the framework are of interest, e.g. the introduction of aggregate risk / uncertainty. This could be achieved either in the form of aggregate productivity risk, or in the form of policy risk. The former can be modelled through introducing stochastic aggregate productivity states (e.g. TFP shocks), the latter through uncertainty about the timing or the magnitude of an upcoming policy reform. While there is a substantial body of literature on consumption, saving (in on or more assets) and labor supply under aggregate risk, the literature on endogenous human capital accumulation and endogenous retirement is, to my best knowledge, limited. Therefore, I believe that the ideas presented above should prove to be a fruitful framework for questions around policy design with respect to demographic change.
