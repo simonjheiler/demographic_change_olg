@@ -1,10 +1,9 @@
 import numpy as np
 import pytest
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_equal  # noqa:F401
 
-from src.model_code.solve import solve_by_backward_induction_baseline_readable
-from src.model_code.solve import solve_by_backward_induction_hc_readable
-from src.model_code.solve import solve_by_backward_induction_hc_vectorized
+from src.model_code.solve import solve_retired  # noqa:F401
+from src.model_code.solve import solve_working  # noqa:F401
 
 #########################################################################
 # PARAMETERS
@@ -69,29 +68,6 @@ pension_benefit = np.float64(
 
 
 @pytest.fixture
-def setup_solve_baseline():
-    out = {
-        "interest_rate": interest_rate,
-        "wage_rate": wage_rate,
-        "capital_grid": capital_grid,
-        "n_gridpoints_capital": n_gridpoints_capital,
-        "sigma": sigma,
-        "gamma": gamma,
-        "pension_benefit": pension_benefit,
-        "neg": neg,
-        "duration_retired": duration_retired,
-        "duration_working": duration_working,
-        "n_prod_states": n_prod_states,
-        "income_tax_rate": income_tax_rate,
-        "beta": beta,
-        "prod_states": prod_states,
-        "efficiency": efficiency,
-        "transition_prod_states": transition_prod_states,
-    }
-    return out
-
-
-@pytest.fixture
 def setup_solve_hc():
     out = {
         "interest_rate": interest_rate,
@@ -118,49 +94,3 @@ def setup_solve_hc():
 #########################################################################
 # TESTS
 #########################################################################
-
-
-def test_solve_baseline_equals_hc(setup_solve_baseline, setup_solve_hc):
-    setup_solve_hc["delta_hc"] = 0.0
-    (
-        policy_capital_working_baseline,
-        policy_labor_working_baseline,
-        policy_capital_retired_baseline,
-    ) = solve_by_backward_induction_baseline_readable(**setup_solve_baseline)
-    (
-        policy_capital_working_hc,
-        policy_hc_working_hc,
-        policy_labor_working_hc,
-        policy_capital_retired_hc,
-    ) = solve_by_backward_induction_hc_vectorized(**setup_solve_hc)
-    assert_array_equal(
-        policy_capital_working_baseline[0, :, :], policy_capital_working_hc[:, 0, :]
-    )
-    assert_array_equal(
-        policy_labor_working_baseline[0, :, :], policy_labor_working_hc[:, 0, :]
-    )
-    assert_array_equal(policy_capital_retired_baseline, policy_capital_retired_hc)
-
-
-def test_solve_hc_readable_equals_vectorized(setup_solve_hc):
-    setup_solve_hc["gamma"] = 1.0
-    (
-        policy_capital_working_readable,
-        policy_hc_working_readable,
-        policy_labor_working_readable,
-        policy_capital_retired_readable,
-    ) = solve_by_backward_induction_hc_readable(**setup_solve_hc)
-    (
-        policy_capital_working_vectorized,
-        policy_hc_working_vectorized,
-        policy_labor_working_vectorized,
-        policy_capital_retired_vectorized,
-    ) = solve_by_backward_induction_hc_vectorized(**setup_solve_hc)
-    assert_array_equal(
-        policy_capital_retired_readable, policy_capital_retired_vectorized
-    )
-    assert_array_equal(
-        policy_capital_working_readable, policy_capital_working_vectorized
-    )
-    assert_array_equal(policy_hc_working_readable, policy_hc_working_vectorized)
-    assert_array_equal(policy_labor_working_readable, policy_labor_working_vectorized)

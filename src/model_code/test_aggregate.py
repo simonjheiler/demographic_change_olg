@@ -1,10 +1,9 @@
 import numpy as np
 import pytest
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_equal  # noqa:F401
 
-from src.model_code.aggregate import aggregate_hc_readable
-from src.model_code.aggregate import aggregate_hc_vectorized
-from src.model_code.solve import solve_by_backward_induction_hc_vectorized
+from src.model_code.aggregate import aggregate_stationary  # noqa:F401
+from src.model_code.aggregate import aggregate_step  # noqa:F401
 
 #########################################################################
 # PARAMETERS
@@ -34,7 +33,6 @@ income_tax_rate = 0.11
 aggregate_capital_in = 1.209551542349482
 aggregate_labor_in = 0.160261889093575
 neg = np.float64(-1e10)
-efficiency = np.ones(age_retire, dtype=np.float64)
 
 # calculate derived parameters
 capital_grid = np.linspace(
@@ -70,7 +68,7 @@ pension_benefit = np.float64(
 
 
 @pytest.fixture
-def setup_solve_hc():
+def setup_solve():
     out = {
         "interest_rate": interest_rate,
         "wage_rate": wage_rate,
@@ -95,56 +93,12 @@ def setup_solve_hc():
 
 
 @pytest.fixture
-def setup_aggregate_hc(setup_solve_hc):
-    (
-        policy_capital_working,
-        policy_hc_working,
-        policy_labor_working,
-        policy_capital_retired,
-    ) = solve_by_backward_induction_hc_vectorized(**setup_solve_hc)
-    out = {
-        "policy_capital_working": policy_capital_working,
-        "policy_hc_working": policy_hc_working,
-        "policy_labor_working": policy_labor_working,
-        "policy_capital_retired": policy_capital_retired,
-        "age_max": age_max,
-        "age_retire": age_retire,
-        "n_gridpoints_capital": n_gridpoints_capital,
-        "hc_init": hc_init,
-        "capital_grid": capital_grid,
-        "n_gridpoints_hc": n_gridpoints_hc,
-        "hc_grid": hc_grid,
-        "mass": mass,
-        "population_growth_rate": population_growth_rate,
-    }
+def setup_aggregate_stationary(setup_solve):
+
+    out = {}
     return out
 
 
 #########################################################################
 # TESTS
 #########################################################################
-
-
-def test_aggregate_hc_readable_equals_vectorized(setup_aggregate_hc):
-    (
-        aggregate_capital_out_readable,
-        aggregate_labor_out_readable,
-        mass_distribution_full_working_readable,
-        mass_distribution_full_retired_readable,
-    ) = aggregate_hc_readable(**setup_aggregate_hc)
-    (
-        aggregate_capital_out_vectorized,
-        aggregate_labor_out_vectorized,
-        mass_distribution_full_working_vectorized,
-        mass_distribution_full_retired_vectorized,
-    ) = aggregate_hc_vectorized(**setup_aggregate_hc)
-    assert aggregate_capital_out_readable == aggregate_capital_out_vectorized
-    assert aggregate_labor_out_readable == aggregate_labor_out_vectorized
-    assert_array_equal(
-        mass_distribution_full_working_readable,
-        mass_distribution_full_working_vectorized,
-    )
-    assert_array_equal(
-        mass_distribution_full_retired_readable,
-        mass_distribution_full_retired_vectorized,
-    )

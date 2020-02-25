@@ -233,7 +233,7 @@ def create_table_stationary_inequality():
     variables = ["capital", "hc", "income"]
     percentiles = np.array([0.25, 0.5, 0.75, 0.95], dtype=np.float64)
     col_names = [
-        f"{percentiles[i].round(2)*100}%" for i in range(len(percentiles))
+        f"{percentiles[i].round(2)*100}" for i in range(len(percentiles))
     ] * len(variables)
 
     out = np.zeros(

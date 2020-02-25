@@ -330,10 +330,7 @@ def solve_transition(
                     sigma=sigma,
                     neg=neg,
                     continuation_value=continuation_value,
-                    n_gridpoints_capital=n_gridpoints_capital,
                     survival_rate=survival_rates[age_idx, time_idx],
-                    policy_capital_retired_tmp=policy_capital_retired_tmp,
-                    value_retired_tmp=value_retired_tmp,
                 )
 
                 # Store results
@@ -414,10 +411,6 @@ def solve_transition(
                     n_gridpoints_hc=n_gridpoints_hc,
                     efficiency=np.float64(efficiency[age_idx]),
                     survival_rate=survival_rates[age_idx, time_idx],
-                    policy_capital_working_tmp=policy_capital_working_tmp,
-                    policy_hc_working_tmp=policy_hc_working_tmp,
-                    policy_labor_working_tmp=policy_labor_working_tmp,
-                    value_working_tmp=value_working_tmp,
                 )
 
                 # Store results
