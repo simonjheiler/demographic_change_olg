@@ -23,7 +23,7 @@
   "tolerance_capital_transition": 0.001,
   "tolerance_labor_transition": 0.001,
   "max_iterations_stationary": 50,
-  "max_iterations_transition": 15,
+  "max_iterations_transition": 10,
   "iteration_update_stationary": 0.05,
   "iteration_update_transition": 0.1
 }
