@@ -80,7 +80,31 @@ duration_working = age_retire - 1
 
 
 def solve_stationary(params):
+    """Solve for stationary equilibrium.
 
+    Solve for value functions, policy functions and cross-sectional distribution of agents.
+    First, guess initial levels of aggregate capital and aggregate labor and derive factor
+    prices. Second, iterate backwards over household age and find optimal policy choices for
+    assets and human capital. Calculate sum of flow utility and expected discounted continuation
+    value on meshgrids for all possible combinations for assets and human capital this period
+    and next period, then find maximal value over assets and human capital next period.
+    Third, initiate with initial mass of household at initial levels of assets and
+    human capital, then iterate forward over policy functions to obtain cross-sectional
+    distribution. Finally, aggregate over households to obtain aggregate variables and
+    verify initial guess. If tolerance for deviation is exceeded, update guess and repeat.
+
+    Arguments:
+        params: dictionary
+            Model specifications containing the variables "setup_name", "income_tax_rate",
+            "aggregate_capital_init", and "aggregate_labor_init"
+    Returns:
+        results: dictionary
+            Equilibrium results containing the variables "aggregate_capital",
+            "aggregate_labor", "wage_rate", "interest_rate", "pension_benefit",
+            "policy_capital_working", "policy_hc_working", "policy_labor_working",
+            "policy_capital_retired", "value_retired", "value_working",
+            "mass_distribution_full_working", and "mass_distribution_full_retired"
+    """
     # Load model specifications
     setup_name = params["setup_name"]
 
@@ -387,7 +411,6 @@ def solve_stationary(params):
 if __name__ == "__main__":
 
     model_name = sys.argv[1]
-    # model_name = "final"
 
     model_specs = json.load(
         open(ppj("IN_MODEL_SPECS", f"stationary_{model_name}.json"), encoding="utf-8")

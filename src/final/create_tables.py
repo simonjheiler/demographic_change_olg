@@ -166,7 +166,11 @@ def create_table_calibration():
                 "curvature of human capital formation technology",
                 params_general["psi"],
             ],
-            [r"$\sigma$", "...", params_general["sigma"]],
+            [
+                r"$\sigma$",
+                "inverse of inter-temporal elasticity of substitution",
+                params_general["sigma"],
+            ],
             ["$J$", "maximum age of households", int(params_general["age_max"] - 1)],
             [
                 "$JR$",

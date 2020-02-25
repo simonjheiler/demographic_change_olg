@@ -3,6 +3,16 @@
 
 def build(ctx):
 
+    # Run test on model code
+    for module in ["auxiliary", "within_period"]:
+        ctx(
+            features="run_py_script",
+            source=ctx.path_to(ctx, "IN_MODEL_CODE", f"test_{module}.py"),
+            deps=ctx.path_to(ctx, "IN_MODEL_CODE", f"{module}.py"),
+            always=True,
+            name=f"test_{module}",
+        )
+
     # Solve for initial and final stationary equilibrium
     for model in ["initial", "final"]:
         ctx(

@@ -14,7 +14,6 @@ def setup_gini():
     out = {
         "pop": np.array([1, 2, 3], dtype=float),
         "val": np.array([1, 1, 1], dtype=float),
-        "makeplot": False,
     }
     return out
 

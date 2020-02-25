@@ -152,8 +152,6 @@ def get_average_hours_worked(policy, mass_distribution):
     """Compute average hours worked from labor input policy and mass distribution of
         working age households.
 
-    ...
-
     Arguments:
         policy: np.array(n_gridpoints_dim_1, n_gridpoints_dim_2, length_1)
             Labor input policy function
@@ -184,29 +182,28 @@ def get_income(
 ):
     """Compute household income during working age and during retirement.
 
-    ...
-
     Arguments:
-        interest_rate: ---
-            ...
-        capital_grid: ---
-            ...
-        pension_benefit: ---
-            ...
-        duration_retired: ---
-            ...
-        n_gridpoints_capital: ---
-            ...
-        duration_working: ---
-            ...
-        n_gridpoints_hc: ---
-            ...
-        hc_grid: ---
-            ...
-        efficiency: ---
-            ...
-        policy_labor_working: ---
-            ...
+        interest_rate: np.float64
+            Current interest rate on capital holdings
+        capital_grid: np.array(n_gridpoints_capital)
+            Asset grid
+        pension_benefit: np.float64
+            Income from pension benefits
+        duration_retired: np.int32
+            Length of retirement period
+        n_gridpoints_capital: np.int32
+            Number of grid points of capital grid
+        duration_working: np.int32
+            Length of working age
+        n_gridpoints_hc: np.int32
+            Number of grid points of human capital grid
+        hc_grid: np.array(n_gridpoints_capital)
+            Human capital grid
+        efficiency: np.array(age_max)
+            Vector of age-dependent labor efficiency multipliers
+        policy_labor_working: np.array(n_gridpoints_capital, n_gridpoints_hc, duration_working)
+            Labor supply policy function for agents of given age (storing optimal
+            hours worked as np.float64)
     Returns:
         income_retired: np.array(n_gridpoints_capital, duration_retired)
             Total household income during retirement by current asset level and age
