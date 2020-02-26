@@ -15,8 +15,8 @@ Data work
     :members:
 
 
-Model solution
-==============
+Model solutions
+===============
 
 .. automodule:: src.final.plot_stationary
     :members:
@@ -24,9 +24,3 @@ Model solution
 .. automodule:: src.final.plot_transition
     :members:
 
-
-Project structure
-=================
-
-.. automodule:: src.final.project_dependency_graph
-    :members:

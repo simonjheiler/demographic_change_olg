@@ -593,11 +593,11 @@ if __name__ == "__main__":
     with open(ppj("OUT_ANALYSIS", "stationary_final.pickle"), "rb") as in_file:
         results_stationary_final = pickle.load(in_file)
 
-    results_transition = solve_transition(
-        results_stationary_initial, results_stationary_final, transition_params_model
-    )
-    # with open(ppj("OUT_ANALYSIS", "transition.pickle"), "rb") as in_file:
-    #     results_transition = pickle.load(in_file)
+    # results_transition = solve_transition(
+    #     results_stationary_initial, results_stationary_final, transition_params_model
+    # )
+    with open(ppj("OUT_ANALYSIS", "transition.pickle"), "rb") as in_file:
+        results_transition = pickle.load(in_file)
 
     with open(ppj("OUT_ANALYSIS", f"transition.pickle"), "wb") as out_file:
         pickle.dump(results_transition, out_file)
