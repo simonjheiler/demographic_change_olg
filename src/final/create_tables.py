@@ -6,9 +6,9 @@ import numpy as np
 import pandas as pd
 
 from bld.project_paths import project_paths_join as ppj
-from src.model_code.auxiliary import get_income
-from src.model_code.auxiliary import gini
-from src.model_code.auxiliary import reshape_as_vector
+from src.model_code.auxiliary import get_income  # noqa:F401
+from src.model_code.auxiliary import gini  # noqa:F401
+from src.model_code.auxiliary import reshape_as_vector  # noqa:F401
 
 
 #####################################################
@@ -236,7 +236,7 @@ def create_table_stationary_inequality():
 
     # Set row and column names
     row_names = ["initial steady state", "final steady state"]
-    variables = ["capital", "hc", "income"]
+    variables = ["capital", "hc"]
     percentiles = np.array([0.25, 0.5, 0.75, 0.95], dtype=np.float64)
     col_names = [
         f"{percentiles[i].round(2)*100}" for i in range(len(percentiles))
@@ -326,22 +326,25 @@ def create_table_stationary_inequality():
         ]
     )
 
-    income_retired, income_working = get_income(
-        interest_rate=results_initial["interest_rate"],
-        capital_grid=capital_grid,
-        pension_benefit=results_initial["pension_benefit"],
-        duration_retired=duration_retire,
-        n_gridpoints_capital=n_gridpoints_capital,
-        duration_working=duration_working,
-        n_gridpoints_hc=n_gridpoints_hc,
-        hc_grid=hc_grid,
-        efficiency=efficiency,
-        policy_labor_working=results_initial["policy_labor_working"],
-    )
-
-    income = reshape_as_vector(income_working, income_retired)
-    # pop = reshape_as_vector(mass_distribution_full_working, mass_distribution_full_retired)
-    # gini_income = gini(pop, income)
+    # income_retired, income_working = get_income(
+    #     interest_rate=results_initial["interest_rate"],
+    #     capital_grid=capital_grid,
+    #     pension_benefit=results_initial["pension_benefit"],
+    #     duration_retired=duration_retire,
+    #     n_gridpoints_capital=n_gridpoints_capital,
+    #     duration_working=duration_working,
+    #     n_gridpoints_hc=n_gridpoints_hc,
+    #     hc_grid=hc_grid,
+    #     efficiency=efficiency,
+    #     policy_labor_working=results_initial["policy_labor_working"],
+    # )
+    #
+    # income = reshape_as_vector(income_working, income_retired)
+    # pop = reshape_as_vector(
+    #     results_initial["mass_distribution_full_working"],
+    #     results_initial["mass_distribution_full_retired"]
+    # )
+    # gini_income, _, _ = gini(pop, income)
 
     # Collect data
     for i in range(2):

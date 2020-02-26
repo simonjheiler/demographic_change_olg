@@ -54,13 +54,13 @@ Inequality w.r.t. to income and asset holdings is lower in the initial economy c
     \caption{Stationary equilibria}
     \label{tab:stationary_inequality}
     \centering
-    \begin{tabular}{l c c c c c c c c c}
+    \begin{tabular}{l c c c c c c c c}
         \hline \hline
-            & \multicolumn{3}{c}{Human capital} & \multicolumn{3}{c}{Wealth} & \multicolumn{3}{c}{Income} \\
-            &25\%  &75\% &Gini &25\%  &75\% &Gini &25\%  &75\% &Gini \\
+            & \multicolumn{4}{c}{Human capital} & \multicolumn{4}{c}{Wealth} \\
+            &25\%  &50\% &75\% &95\% &25\%  &50\% &75\% &95\% \\
         \hline
         \csvreader[head to column names]{../../out/tables/stationary_inequality.csv}{}
-        {\csvcoli&\csvcolii&\csvcoliii&\csvcoliv&\csvcolv&\csvcolvi&\csvcolvii&\csvcolviii&\csvcolix&\csvcolx\\}
+        {\csvcoli&\csvcolii&\csvcoliii&\csvcoliv&\csvcolv&\csvcolvi&\csvcolvii&\csvcolviii&\csvcolix\\}
         \\
         \hline \hline \\
     \end{tabular}
