@@ -187,10 +187,10 @@ if __name__ == "__main__":
     mass_initial, fertility_initial = find_stationary_population(
         survival_rates_sim[:, 0]
     )
-    mass_final, fertility_final = find_stationary_population(survival_rates_sim[:, -1])
     mass_transition, fertility_transition = simulate_mass(survival_rates_sim)
-    # mass_final = mass_transition[:, -1]
-    # fertility_final = fertility_transition[-1]
+    # mass_final, fertility_final = find_stationary_population(survival_rates_sim[:, -1])
+    mass_final = mass_transition[:, -1]
+    fertility_final = fertility_transition[-1]
 
     save_files = {
         "survival_rates_initial": survival_rates_sim[:, 0],

@@ -7,6 +7,8 @@ import pandas as pd
 
 from bld.project_paths import project_paths_join as ppj
 from src.model_code.auxiliary import get_income
+from src.model_code.auxiliary import gini
+from src.model_code.auxiliary import reshape_as_vector
 
 
 #####################################################
@@ -336,6 +338,10 @@ def create_table_stationary_inequality():
         efficiency=efficiency,
         policy_labor_working=results_initial["policy_labor_working"],
     )
+
+    income = reshape_as_vector(income_working, income_retired)
+    # pop = reshape_as_vector(mass_distribution_full_working, mass_distribution_full_retired)
+    # gini_income = gini(pop, income)
 
     # Collect data
     for i in range(2):

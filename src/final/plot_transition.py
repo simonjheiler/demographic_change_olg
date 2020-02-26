@@ -27,6 +27,7 @@ with open(ppj("OUT_ANALYSIS", f"transition.pickle"), "rb") as pickle_file:
 
 age_max = np.int32(params_general["age_max"])
 age_retire = np.int32(params_general["age_retire"])
+hc_max = np.float64(params_general["hc_max"])
 duration_transition = np.int32(params_transition["duration_transition"])
 
 #####################################################
@@ -53,7 +54,7 @@ def plot_transition():
     labels = [line.get_label() for line in lines]
     ax1.legend(lines, (labels), loc=0)
     ax1.set(xlabel="transition period", ylabel="assets", ybound=[0, 15.0])
-    ax2.set(ylabel="human capital", ybound=[0, 2.5])
+    ax2.set(ylabel="human capital", ybound=[0, hc_max])
 
     # Save figure
     fig.savefig(ppj("OUT_FIGURES", "results_transition.png"))
