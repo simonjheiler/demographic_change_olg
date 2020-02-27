@@ -48,7 +48,7 @@ Figure \ref{fig:lifecycle_profiles} plots asset holdings and human capital level
 
 As is apparent from the graph, in both economies, households initially invest in human capital before accumulating capital for retirement. The rigged part of the asset profiles is an artifact of the chosen grid structure and solution method. Moving to finer grids or interpolating in between grid points for solution should remove these patterns, while leaving the overall shape of the profiles unaltered. As expected, agents in the final stationary equilibrium accumulate more of both physical and human capital in light of (i) longer expected retirement duration and (ii) lower replacement rates due to higher dependency rates.
 
-Inequality w.r.t. to income and asset holdings is lower in the initial economy compared to the final state. The Gini coefficient for household income increases from X to Y and for asset holdings increases from Z to ZZ. Table \ref{tab:stationary_inequality} contains some summary statistics on inequality for the two stationary calibrations.
+Inequality w.r.t. to asset holdings and human capital levels is lower in the initial economy compared to the final state. The share of capital held by the richest 25\% of the population increases from 61\% in the initial stationary equilibrium to 72\% in the final state. The share of total human capital held by the bottom half of the population decreases from 32\% to 24\%. These results are not unexpected: the only source on heterogeneity in the economy is age, hence more pronounced life-cycle profiles, as featured in \ref{fig:lifecycle_profiles}, translate into more dispersion in wealth and human capital levels. Table \ref{tab:stationary_inequality} contains some summary statistics on inequality for the two stationary calibrations.
 
 \begin{table}[ht]
     \caption{Stationary equilibria}
@@ -56,7 +56,7 @@ Inequality w.r.t. to income and asset holdings is lower in the initial economy c
     \centering
     \begin{tabular}{l c c c c c c c c}
         \hline \hline
-            & \multicolumn{4}{c}{Human capital} & \multicolumn{4}{c}{Wealth} \\
+            & \multicolumn{4}{c}{Wealth} & \multicolumn{4}{c}{Human capital} \\
             &25\%  &50\% &75\% &95\% &25\%  &50\% &75\% &95\% \\
         \hline
         \csvreader[head to column names]{../../out/tables/stationary_inequality.csv}{}
@@ -69,19 +69,4 @@ Inequality w.r.t. to income and asset holdings is lower in the initial economy c
 
 \subsection{Transitional dynamics}
 
-Moving to transitional dynamics, we observe that the transition path we obtain from the simulation is not monotone (cf. figure \ref{fig:transition_aggregates}). This is likely driven by an insufficiently long transition period.
-
-\begin{table}[ht]
-    \caption{Transitional dynamics}
-    \label{tab:transition_summary}
-    \centering
-    \begin{tabular}{l c c c c}
-        \hline \hline
-            &aggregate capital  & aggregate labor   & OADR  & pension benefits \\
-        \hline
-        \csvreader[head to column names]{../../out/tables/stationary_aggregates.csv}{}
-        {\\\csvcoli&\csvcolii&\csvcoliii&\csvcoliv&\csvcolv}
-        \\
-        \hline \hline \\
-    \end{tabular}
-\end{table}
+Moving to transitional dynamics, we limit our observation to the path of aggregate capital and aggregate labor over time (cf. figure \ref{fig:transition_aggregates}). Additional analyses, such as the development of inequality over time or regarding other aspects of the dynamics of the cross-sectional distribution, are, in principle, feasible with the data that is collected from solving the model. However, there is one important caveat: the transition paths resulting from the analysis are not perfectly in line with the intended model setup. As can be seen from the plot, the path for capital features a distinct and slightly concave increase at the beginning of the transition period. As discussed in section \ref{sec:data}, the intention in setting up the demographic simulation was that neither initial, nor final stationary equilibrium are directly affected by the change in mortality rates. The fact that the capital path responds strongly at the onset of the transition period is strong evidence that the time lag to the beginning of the shift in mortality rates is insufficiently long. If set up correctly, the expected transition path would remain at the initial level for some time, then smoothly adjust to the new level and again remain at that level for some time before the end of the transition period. The patterns in the results of the analysis indicate that a much longer transition period is required to obtain this. However, with the current implementation of the model, this substantially extending the transition period is not feasible due to computational limitation. As the informational content of in-depth analyses of the transition path is limited given this caveat, I abstain from further analysis at this point.
